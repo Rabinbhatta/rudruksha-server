@@ -50,3 +50,20 @@ export const login = async(req,res)=>{
        res.status(404).json({error :error.message})
     }
 }
+
+export const deleteUser= async(req,res)=>{
+    try {
+       const id = req.params.id;
+       const user = await User.findByIdAndDelete(id);
+       if(!user){
+        res.status(404).json({error :"User not found!!"})
+
+    }else{
+        res.status(200).json({msg:"User Deleted"})
+    }
+
+    } catch (error) {
+       res.status(404).json({error :error.message})
+    }
+}
+
