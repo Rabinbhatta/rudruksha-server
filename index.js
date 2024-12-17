@@ -10,6 +10,7 @@ import {v2 as cloudinary} from "cloudinary"
 import {createServer} from "http"
 import authRoute from "./router/auth.js"
 import getRoute from "./router/get.js"
+import productRoute from "./router/product.js"
 
 const app = express()
 const https = createServer(app)
@@ -30,6 +31,13 @@ app.use(fileUpload({
 
 app.use("/auth",authRoute)
 app.use("/get",getRoute)
+app.use("/product",productRoute)
+
+cloudinary.config({
+    cloud_name: process.env.cloudinary_cloud_name, 
+    api_key: process.env.cloudinary_api_key, 
+    api_secret: process.env.cloudinary_api_secret
+})
 
 
 mongoose.set('strictQuery', true)
