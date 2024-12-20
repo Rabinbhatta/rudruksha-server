@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 
 const ProductSchema = mongoose.Schema({
-    name:{
+    title:{
         type:String,
         required: true
     },
@@ -15,9 +15,38 @@ const ProductSchema = mongoose.Schema({
         required: true
     },
     img:{
+        type:Array,
+        required: true
+    },
+    description:{
+            type:String,
+            required: true
+    },
+    isSale:{
+        type:Boolean,
+        required: true
+    },
+    faces:{
         type:String,
         required: true
+    },
+    isSpecial:{
+        type:Boolean,
+        required: true
+    },
+    country:{
+        type:String,
+        required: true
+    },
+    weight:{
+        type:String,
+        required: true
+    },
+    isTopSelling:{
+        type:Boolean,
+        required: true
     }
+    
 })
 
 
