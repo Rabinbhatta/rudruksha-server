@@ -9,9 +9,11 @@ export const createProduct = async(req,res)=>{
             category,
             description,
             faces,
-            country
+            country,
+            weight
         } = req.body;
         const isSale = req.body.isSale == "true"
+        const isTopSelling = req.body.isSale == "true"
         const isSpecial = req.body.isSpecial == "true"
     
         // Check if files were uploaded
@@ -40,7 +42,9 @@ export const createProduct = async(req,res)=>{
             isSale,
             faces,
             isSpecial,
-            country
+            country,
+            isTopSelling,
+            weight
         });
     
         // Save the product to the database
