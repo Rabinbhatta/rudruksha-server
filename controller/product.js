@@ -10,7 +10,8 @@ export const createProduct = async(req,res)=>{
             description,
             faces,
             country,
-            weight
+            weight,
+            size
         } = req.body;
         const isSale = req.body.isSale == "true"
         const isTopSelling = req.body.isSale == "true"
@@ -44,7 +45,8 @@ export const createProduct = async(req,res)=>{
             isSpecial,
             country,
             isTopSelling,
-            weight
+            weight,
+            size
         });
     
         // Save the product to the database

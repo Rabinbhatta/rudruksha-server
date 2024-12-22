@@ -22,6 +22,10 @@ const ProductSchema = mongoose.Schema({
             type:String,
             required: true
     },
+    size:{
+        type:String,
+        required: true
+},
     isSale:{
         type:Boolean,
         required: true
