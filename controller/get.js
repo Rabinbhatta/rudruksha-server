@@ -15,11 +15,23 @@ export const getUsers = async (req, res) => {
 
 export const getProducts = async (req, res) => {
   try {
-    const products = await Product.find(); // Await the query
+    const { page = 1, limit = 8 } = req.query; // Default page is 1, limit is 8
+    const skip = (page - 1) * limit; // Calculate the number of documents to skip
+
+    // Find products with pagination
+    const products = await Product.find().skip(skip).limit(Number(limit));
+    const totalProducts = await Product.countDocuments(); // Get the total number of products
+
     if (!products || products.length === 0) {
-      return res.status(404).json({ msg: "No data found" }); // Use 404 for empty data
+      return res.status(404).json({ msg: "No data found" }); // 404 for no data
     }
-    return res.status(200).json({ products }); // Use 200 for success
+
+    return res.status(200).json({
+      products,
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalProducts / limit),
+      totalProducts,
+    });
   } catch (error) {
     return res.status(500).json({ msg: error.message }); // 500 for server error
   }
