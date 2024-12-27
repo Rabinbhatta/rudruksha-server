@@ -1,7 +1,8 @@
 import User from "../models/user.js";
 import bcrypt from "bcrypt";
-import {v2 as cloudinary} from "cloudinary"
 import jwt from "jsonwebtoken"
+import { Cart } from "../models/cart.js";
+import Product from "../models/product.js";
 
 export const register = async(req,res)=>{
     try {
@@ -34,17 +35,33 @@ export const login = async(req,res)=>{
            res.status(404).json({error :"User not found!!"})
 
        }
+       const cart = await Cart.findOne({ userId: user._id });
+       let productDetails = [];
+       if (cart) {
+         productDetails = await Promise.all(
+            cart.products.map(async (item) => {
+              const product = await Product.findById(item.productId);
+              if (product) {
+                return {
+                  ...product.toObject(), // Convert product document to a plain object
+                  quantity: item.quantity,
+                  totalPrice: item.total,
+                };
+              }
+              return null;
+            })
+          );
+       }
+     
+       // Fetch all product details in parallel
+      
        const isMatch = await bcrypt.compare(password,user.password)
        if(!isMatch){
            res.status(404).json({error :"Wrong password!!"})
        }else{
        const token =  jwt.sign(user.id,process.env.JWT_KEY)
-       res.cookie('token', token, {
-           maxAge: 3600000,
-           httpOnly: true,
-           
-       });
-       res.status(200).json({jwt:token,user:{name:user.fullName,email:user.email,id:user._id}});}    
+
+       res.status(200).json({jwt:token,user:{name:user.fullName,email:user.email,id:user._id,cart:productDetails}});}    
     } catch (error) {
        res.status(404).json({error :error.message})
     }
