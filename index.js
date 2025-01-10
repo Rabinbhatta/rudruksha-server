@@ -12,6 +12,7 @@ import authRoute from "./router/auth.js"
 import getRoute from "./router/get.js"
 import productRoute from "./router/product.js"
 import cartRoute from "./router/carts.js"
+import reviewRoute from "./router/review.js"
 
 const app = express()
 const https = createServer(app)
@@ -34,6 +35,7 @@ app.use("/auth",authRoute)
 app.use("/get",getRoute)
 app.use("/product",productRoute)
 app.use("/cart",cartRoute)
+app.use("/review",reviewRoute)
 
 cloudinary.config({
     cloud_name: process.env.cloudinary_cloud_name, 

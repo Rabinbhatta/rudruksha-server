@@ -14,26 +14,106 @@ export const getUsers = async (req, res) => {
 };
 
 export const getProducts = async (req, res) => {
+  const { 
+    sortBy = '', 
+    order = 'asc', 
+    page = 1, 
+    limit = 8, 
+    filterBy, 
+    filterValue 
+  } = req.query;
+
   try {
-    const { page = 1, limit = 8 } = req.query; // Default page is 1, limit is 8
-    const skip = (page - 1) * limit; // Calculate the number of documents to skip
+    // Determine sort order
+    const sortOrder = order === 'desc' ? -1 : 1;
 
-    // Find products with pagination
-    const products = await Product.find().skip(skip).limit(Number(limit));
-    const totalProducts = await Product.countDocuments(); // Get the total number of products
+    // Parse pagination parameters
+    const pageNumber = parseInt(page, 10) || 1;
+    const limitNumber = parseInt(limit, 10) || 8;
+    const skip = (pageNumber - 1) * limitNumber;
 
-    if (!products || products.length === 0) {
-      return res.status(404).json({ msg: "No data found" }); // 404 for no data
+    // Build the match stage with filters
+    const matchStage = {};
+
+    if (filterBy && filterValue) {
+      switch (filterBy) {
+        case 'priceRange':
+          const [minPrice, maxPrice] = filterValue.split(',').map(parseFloat);
+          matchStage.priceNumeric = { $gte: minPrice, $lte: maxPrice };
+          break;
+        case 'category':
+          matchStage.category = { $in: filterValue.split(',') };
+          break;
+        case 'country':
+          matchStage.country = { $in: filterValue.split(',') };
+          break;
+        case 'size':
+          matchStage.size = { $in: filterValue.split(',') };
+          break;
+        case 'faces':
+          matchStage.facesNumeric = parseInt(filterValue, 10);
+          break;
+        case 'sale':
+          matchStage.isSale = filterValue === 'true';
+          break;
+        default:
+          break;
+      }
     }
 
-    return res.status(200).json({
+    // Fetch products with filtering, sorting, and pagination
+    const products = await Product.aggregate([
+      // Convert string fields to appropriate types for sorting and filtering
+      {
+        $addFields: {
+          priceNumeric: { $toDouble: '$price' },
+          facesNumeric: { $toInt: '$faces' },
+          sizeNumeric: {
+            $switch: {
+              branches: [
+                { case: { $eq: ['$size', 'small'] }, then: 1 },
+                { case: { $eq: ['$size', 'medium'] }, then: 2 },
+                { case: { $eq: ['$size', 'big'] }, then: 3 },
+              ],
+              default: 0,
+            },
+          },
+        },
+      },
+      // Apply filters
+      {
+        $match: matchStage,
+      },
+      // Sort based on the sortBy parameter
+      {
+        $sort: {
+          [sortBy === 'size' ? 'sizeNumeric' : sortBy === 'faces' ? 'facesNumeric' : 'priceNumeric']: sortOrder,
+        },
+      },
+      // Pagination
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limitNumber,
+      },
+    ]);
+
+    // Get total count for pagination metadata
+    const totalCount = await Product.countDocuments(matchStage);
+
+    // Respond with the paginated and sorted products
+    res.status(200).json({
       products,
-      currentPage: Number(page),
-      totalPages: Math.ceil(totalProducts / limit),
-      totalProducts,
+      pagination: {
+        currentPage: pageNumber,
+        totalPages: Math.ceil(totalCount / limitNumber),
+        totalCount,
+      },
     });
   } catch (error) {
-    return res.status(500).json({ msg: error.message }); // 500 for server error
+    console.error('Error fetching products:', error);
+    res.status(500).json({ error: 'An error occurred while fetching products.' });
   }
 };
 
