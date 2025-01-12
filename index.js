@@ -25,7 +25,10 @@ app.use(morgan("common"));
 app.use(bodyParser.json({limit:"30mb", extended:true}));
 app.use(bodyParser.urlencoded({ limit: "30mb", extended: true}));
 app.use(cors({
-    origin: 'https://rudraksha-theta.vercel.app/', // Your React app domain
+    origin: 'https://rudraksha-theta.vercel.app', // Your React app domain
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true, // If you are sending cookies or HTTP authentication
+    optionsSuccessStatus: 204,
 }));
 app.use(fileUpload({
     useTempFiles:true
