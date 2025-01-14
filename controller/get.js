@@ -56,6 +56,12 @@ export const getProducts = async (req, res) => {
         case 'sale':
           matchStage.isSale = filterValue === 'true';
           break;
+          case 'special':
+          matchStage.isSpecial = filterValue === 'true';
+          break;
+          case 'topSelling':
+          matchStage.isTopSelling = filterValue === 'true';
+          break;
         default:
           break;
       }
