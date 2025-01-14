@@ -82,10 +82,10 @@ export const deleteUser= async(req,res)=>{
        const id = req.params.id;
        const user = await User.findByIdAndDelete(id);
        if(!user){
-        res.status(404).json({error :"User not found!!"})
+        return res.status(404).json({error :"User not found!!"})
 
     }else{
-        res.status(200).json({msg:"User Deleted"})
+        return res.status(200).json({msg:"User Deleted"})
     }
 
     } catch (error) {
@@ -93,3 +93,70 @@ export const deleteUser= async(req,res)=>{
     }
 }
 
+// Update User Information
+export const updateUser = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { name, email } = req.body;
+
+    // Validate input
+    if (!name || !email) {
+      return res.status(400).json({ message: "Username and email are required" });
+    }
+
+    // Find the user by ID
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update user information
+    user.name = name;
+    user.email = email;
+
+    // Save the updated user
+    await user.save();
+
+    res.status(200).json({ message: "User updated successfully", user });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Change Password
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.params.id; // Assuming the user ID is available in the request (e.g., from authentication middleware)
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Old password and new password are required" });
+    }
+
+    // Find the user by ID
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify the old password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: "Old password is incorrect" });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10); // 10 is the salt rounds
+
+    // Update the user's password
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
