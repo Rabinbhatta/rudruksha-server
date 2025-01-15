@@ -14,13 +14,14 @@ export const getUsers = async (req, res) => {
 };
 
 export const getProducts = async (req, res) => {
-  const { 
-    sortBy = '', 
-    order = 'asc', 
-    page = 1, 
-    limit = 8, 
-    filterBy, 
-    filterValue 
+  const {
+    sortBy = '',
+    order = 'asc',
+    page = 1,
+    limit = 8,
+    filterBy,
+    filterValue,
+    excludeId, // Add excludeId to query parameters
   } = req.query;
 
   try {
@@ -34,6 +35,11 @@ export const getProducts = async (req, res) => {
 
     // Build the match stage with filters
     const matchStage = {};
+
+    if (excludeId) {
+      // Exclude the product with the specified ID
+      matchStage._id = { $ne: excludeId };
+    }
 
     if (filterBy && filterValue) {
       switch (filterBy) {
@@ -56,10 +62,10 @@ export const getProducts = async (req, res) => {
         case 'sale':
           matchStage.isSale = filterValue === 'true';
           break;
-          case 'special':
+        case 'special':
           matchStage.isSpecial = filterValue === 'true';
           break;
-          case 'topSelling':
+        case 'topSelling':
           matchStage.isTopSelling = filterValue === 'true';
           break;
         default:
@@ -69,7 +75,6 @@ export const getProducts = async (req, res) => {
 
     // Fetch products with filtering, sorting, and pagination
     const products = await Product.aggregate([
-      // Convert string fields to appropriate types for sorting and filtering
       {
         $addFields: {
           priceNumeric: { $toDouble: '$price' },
@@ -86,17 +91,14 @@ export const getProducts = async (req, res) => {
           },
         },
       },
-      // Apply filters
       {
         $match: matchStage,
       },
-      // Sort based on the sortBy parameter
       {
         $sort: {
           [sortBy === 'size' ? 'sizeNumeric' : sortBy === 'faces' ? 'facesNumeric' : 'priceNumeric']: sortOrder,
         },
       },
-      // Pagination
       {
         $skip: skip,
       },
@@ -105,10 +107,8 @@ export const getProducts = async (req, res) => {
       },
     ]);
 
-    // Get total count for pagination metadata
     const totalCount = await Product.countDocuments(matchStage);
 
-    // Respond with the paginated and sorted products
     res.status(200).json({
       products,
       pagination: {
@@ -123,6 +123,7 @@ export const getProducts = async (req, res) => {
   }
 };
 
+
 export const getProduct = async (req, res) => {
   try {
     const id = req.params.id;
@@ -135,3 +136,6 @@ export const getProduct = async (req, res) => {
     return res.status(500).json({ msg: error.message }); // 500 for server error
   }
 };
+
+
+
