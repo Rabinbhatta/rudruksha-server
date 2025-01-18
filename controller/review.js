@@ -2,11 +2,12 @@ import Review from "../models/review.js";
 
 export const createReview = async(req,res)=>{
     try {
-        const {userID,comment,rating} = req.body
+        const {userID,comment,rating,commentTitle} = req.body
         const review = new Review({
             userID,
             comment,
-            rating
+            rating,
+            commentTitle
         })
         const savedReview = await review.save()
         res.status(202).json({savedReview})
