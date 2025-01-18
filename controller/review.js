@@ -21,8 +21,11 @@ export const getReview = async (req, res) => {
         const { page = 1, limit = 5 } = req.query;
         const skip = (page - 1) * limit;
         
-        // Fetch paginated reviews
-        const reviews = await Review.find().skip(skip).limit(limit);
+        // Fetch paginated reviews and populate userID to get user name
+        const reviews = await Review.find()
+            .skip(skip)
+            .limit(limit)
+            .populate('userID', 'fullName');
 
         // Get total count of reviews
         const totalCount = await Review.countDocuments();
@@ -37,6 +40,7 @@ export const getReview = async (req, res) => {
         res.status(404).json({ message: error.message });
     }
 };
+
 
 export const deleteReview = async (req, res) => {
     try {

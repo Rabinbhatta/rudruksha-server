@@ -78,7 +78,7 @@ export const deleteProduct= async(req,res)=>{
 export const editProduct = async (req, res) => {
     try {
       const { id } = req.params; // Assuming the product ID is sent as a URL parameter
-      const { name, price, category, description, isSale, faces, isSpecial, country } = req.body; // Extract fields from the request body
+      const { name, price, category, description, isSale, faces, isSpecial, country,stock } = req.body; // Extract fields from the request body
   
       // Check if an image file is included
       let updatedImg = req.body.img; // Keep current image URLs if no file is provided
@@ -106,6 +106,7 @@ export const editProduct = async (req, res) => {
           faces,
           isSpecial,
           country,
+          stock
         },
         { new: true } // Return the updated document
       );

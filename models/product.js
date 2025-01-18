@@ -49,6 +49,10 @@ const ProductSchema = mongoose.Schema({
     isTopSelling:{
         type:Boolean,
         required: true
+    },
+    stock:{
+        type:Number,
+        required: true
     }
     
 })

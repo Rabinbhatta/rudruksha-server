@@ -41,3 +41,23 @@ export const removeCart = async (req,res) => {
     }
 }
 
+export const getCartByUserId = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Find the cart by userId, populate user fullname and products
+        const cart = await Cart.findOne({ userId })
+            .populate('userId', 'fullname') // Populates user fullname
+            .populate('products.productId'); // Populates product details
+
+        if (!cart) {
+            return res.status(404).json({ message: "Cart not found" });
+        }
+
+        res.status(200).json(cart);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
