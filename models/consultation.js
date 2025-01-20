@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 
-const queriesSchema = new mongoose.Schema({
+const consultationSchema = new mongoose.Schema({
      email:{
         type:String,
         required:true
@@ -10,11 +10,11 @@ const queriesSchema = new mongoose.Schema({
         type:String,
         required:true,
     },
-    Message:{
+    message:{
         type:String,
         required:true
     },
-    Phone:{
+    phone:{
         type:String,
         required:true
     },
@@ -24,4 +24,6 @@ const queriesSchema = new mongoose.Schema({
     }
 })
 
-const Queries =  mongoose.model("Queries",queriesSchema) 
+const Consultation =  mongoose.model("Consultaion",consultationSchema) 
+
+export default Consultation;
