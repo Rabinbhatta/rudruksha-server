@@ -2,7 +2,7 @@ import Consultation from '../models/consultation.js';
 
 export const getConsultation = async (req, res) => {
   try {
-    const{page=1,limit=5}=req.query;
+    const{page=1,limit=10}=req.query;
     const startIndex=(page-1)*limit;
     const total= await Consultation.countDocuments({});
     const consultation = await Consultation.find().limit(limit).skip(startIndex);

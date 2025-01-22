@@ -120,4 +120,16 @@ export const editProduct = async (req, res) => {
       res.status(500).json({ error: error.message });
     }
   };
+
+export const searchProduct = async(req,res)=>{
+  try {
+    const { title="" , description="" ,page=1,limit=8 } = req.query;
+    const parsedTitle = isNaN(title) ? title : title.toString();
+    const parsedDescription = isNaN(description) ? description : description.toString();
+    const products = await Product.find({$and:[{ title: { $regex:parsedTitle, $options: 'i' } },{description:{$regex:parsedDescription,$options:'i'}}]}).skip((page - 1) * limit).limit(limit);
+    res.status(200).json({ products });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
   
