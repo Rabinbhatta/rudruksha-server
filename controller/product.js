@@ -12,6 +12,7 @@ export const createProduct = async (req, res) => {
       country,
       weight,
       size,
+      stock,
     } = req.body;
     const isSale = req.body.isSale == "true";
     const isTopSelling = req.body.isSale == "true";
@@ -19,7 +20,7 @@ export const createProduct = async (req, res) => {
 
     // Check if files were uploaded
     if (!req.files || !req.files.img) {
-      return res.status(400).json({ message: "No files uploaded" });
+      return res.status(404).json({ message: "No files uploaded" });
     }
 
     // Handle single or multiple images
@@ -49,6 +50,7 @@ export const createProduct = async (req, res) => {
       isTopSelling,
       weight,
       size,
+      stock,
     });
 
     // Save the product to the database
