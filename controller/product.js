@@ -79,7 +79,9 @@ export const deleteProduct = async (req, res) => {
 
 export const editProduct = async (req, res) => {
   try {
-    const { id } = req.params; // Assuming the product ID is sent as a URL parameter
+    const { id } = req.params;
+
+    // Parse request body and handle removed images
     const {
       name,
       price,
@@ -90,50 +92,102 @@ export const editProduct = async (req, res) => {
       isSpecial,
       country,
       stock,
-    } = req.body; // Extract fields from the request body
+      removedImages = "[]", // Default to empty array string
+    } = req.body;
 
-    // Check if an image file is included
-    let updatedImg = req.body.img; // Keep current image URLs if no file is provided
-    if (req.files && req.files.img) {
-      const files = Array.isArray(req.files.img)
-        ? req.files.img
-        : [req.files.img];
-      updatedImg = [];
+    // Safely parse removed images
+    const parsedRemovedImages = JSON.parse(removedImages);
 
-      // Upload each image to Cloudinary
-      for (const file of files) {
-        const result = await cloudinary.uploader.upload(file.tempFilePath);
-        updatedImg.push(result.secure_url); // Add the uploaded image URL
+    // Validate product existence first
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Handle image removal from Cloudinary
+    if (parsedRemovedImages?.length > 0) {
+      try {
+        await Promise.all(
+          parsedRemovedImages.map(async (url) => {
+            // Improved public ID extraction
+            const publicId = url.match(/\/([^/]+)\.[a-z]+$/)?.[1];
+            if (publicId) {
+              await cloudinary.uploader.destroy(publicId);
+            }
+          })
+        );
+      } catch (cloudinaryError) {
+        console.error("Cloudinary deletion error:", cloudinaryError);
+        return res.status(500).json({
+          error: "Failed to delete old images",
+          details: cloudinaryError.message,
+        });
       }
     }
 
-    // Update the product in the database
+    // Handle new image uploads
+    let newImageUrls = [];
+    if (req.files?.imgFile) {
+      try {
+        const files = Array.isArray(req.files.imgFile)
+          ? req.files.imgFile
+          : [req.files.imgFile];
+
+        newImageUrls = await Promise.all(
+          files.map(async (file) => {
+            const result = await cloudinary.uploader.upload(file.tempFilePath);
+            return result.secure_url;
+          })
+        );
+      } catch (uploadError) {
+        console.error("Image upload error:", uploadError);
+        return res.status(500).json({
+          error: "Failed to upload new images",
+          details: uploadError.message,
+        });
+      }
+    }
+
+    // Combine and validate images
+    const updatedImg = [
+      ...existingProduct.img.filter(
+        (url) => !parsedRemovedImages.includes(url)
+      ),
+      ...newImageUrls,
+    ];
+
+    if (updatedImg.length > 4) {
+      return res.status(400).json({ error: "Maximum 4 images allowed" });
+    }
+
+    // Update product with converted boolean values
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
       {
         name,
-        price,
+        price: Number(price),
         category,
         img: updatedImg,
         description,
-        isSale,
+        isSale: isSale === "True",
         faces,
-        isSpecial,
+        isSpecial: isSpecial === "True",
         country,
-        stock,
+        stock: Number(stock),
       },
-      { new: true } // Return the updated document
+      { new: true, runValidators: true }
     );
 
-    if (!updatedProduct) {
-      return res.status(404).json({ error: "Product not found" });
-    }
-
-    res
-      .status(200)
-      .json({ message: "Product updated successfully", updatedProduct });
+    res.status(200).json({
+      message: "Product updated successfully",
+      updatedProduct,
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Server error:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      details: error.message,
+    });
   }
 };
 
