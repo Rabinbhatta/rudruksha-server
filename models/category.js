@@ -9,3 +9,7 @@ const categorySchema = new mongoose.Schema({
     maxlength: [32, "Too long"],
   },
 });
+
+const Category = mongoose.model("Category", categorySchema);
+
+export default Category;
