@@ -25,7 +25,7 @@ export const register = async (req, res) => {
       });
       const savedUser = await newUser.save();
 
-      res.status(201).json({ msg: "Sucess" });
+      res.status(201).json({ savedUser });
     }
   } catch (error) {
     res.status(404).json({ error: error.message });
@@ -179,7 +179,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export const forgetPassword = async (req, res) => {
+export const otpSend = async (req, res) => {
   try {
     const { email } = req.body;
     console.log(process.env.EMAIL_USER, process.env.EMAIL_PASS);
@@ -193,11 +193,12 @@ export const forgetPassword = async (req, res) => {
     user.otp = otp;
     user.otpExpires = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
     await user.save();
+    const subject = user.isVerified ? "Password Reset OTP" : "Verify Email OTP";
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "Password Reset OTP",
+      subject: subject,
       text: `Your OTP code is: ${otp}`,
     };
 
@@ -232,6 +233,26 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     res.json({ message: "Password reset successful" });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const emailVerify = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user || user.otp !== otp || user.otpExpires < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    res.json({ user });
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }
