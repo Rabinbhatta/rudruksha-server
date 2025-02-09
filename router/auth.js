@@ -8,6 +8,8 @@ import {
   resetPassword,
   otpSend,
   emailVerify,
+  adminLogin,
+  adminRegister,
 } from "../controller/auth.js";
 
 const router = express.Router();
@@ -20,5 +22,7 @@ router.put("/changePassword/:id", changePassword);
 router.post("/otpSend", otpSend);
 router.post("/resetPassword", resetPassword);
 router.post("/verifyEmail", emailVerify);
+router.post("/admin/login", adminLogin);
+router.post("/admin/register", adminRegister);
 
 export default router;

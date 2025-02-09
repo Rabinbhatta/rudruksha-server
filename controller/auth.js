@@ -7,6 +7,7 @@ import { Cart } from "../models/cart.js";
 import Product from "../models/product.js";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import Admin from "../models/admin.js";
 
 dotenv.config();
 
@@ -255,5 +256,50 @@ export const emailVerify = async (req, res) => {
     res.json({ user });
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const admin = await Admin.findOne({ email });
+
+    if (!admin) {
+      return res.status(404).json({ error: "Admin not found!" });
+    }
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+
+    if (!isMatch) {
+      return res.status(404).json({ error: "Wrong password!" });
+    }
+
+    const token = jwt.sign({ id: admin._id }, process.env.JWT_KEY);
+    return res.status(200).json({
+      jwt: token,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const adminRegister = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await Admin.findOne({ email });
+    if (user) {
+      res.status(404).json({ error: "Email already used!!" });
+    } else {
+      const passwordhash = await bcrypt.hash(password, 10);
+      const newAdmin = new Admin({
+        email,
+        password: passwordhash,
+      });
+      const savedUser = await newAdmin.save();
+
+      res.status(201).json({ savedUser });
+    }
+  } catch (error) {
+    res.status(404).json({ error: error.message });
   }
 };
