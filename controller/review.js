@@ -46,6 +46,9 @@ export const deleteReview = async (req, res) => {
   try {
     const id = req.params.id;
     const deletedReview = await Review.findByIdAndDelete(id);
+    if (!deleteReview) {
+      res.status(202).json({ msg: "not found" });
+    }
     res.status(202).json({ deletedReview });
   } catch (error) {
     res.status(404).json({ message: error.message });
