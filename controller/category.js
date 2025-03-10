@@ -2,10 +2,24 @@ import Category from "../models/category.js";
 
 export const createCategory = async (req, res) => {
   try {
-    const category = new Category(req.body);
+    const { name } = req.body;
+    const category = new Category({ name });
     await category.save();
     res.status(201).json(category);
   } catch (error) {
+    res.status(409).json({ message: error.message });
+  }
+};
+
+export const createSubCategory = async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id);
+    const { name } = req.body;
+    category.subCategories.push({ name });
+    await category.save();
+    res.status(201).json(category);
+  } catch (error) {
+    console.log(error.message);
     res.status(409).json({ message: error.message });
   }
 };
@@ -30,10 +44,21 @@ export const updateCategory = async (req, res) => {
   }
 };
 
-export const deleteCategory = async (req, res) => {
+export const deleteSubCategory = async (req, res) => {
   try {
-    await Category.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Category deleted successfully" });
+    const { id } = req.params;
+    const updatedCategory = await Category.findOneAndUpdate(
+      { "subCategories._id": id }, // Find category containing subcategory
+      { $pull: { subCategories: { _id: id } } }, // Remove subcategory
+      { new: true } // Return updated document
+    );
+
+    if (!updatedCategory) {
+      console.log("Subcategory not found!");
+      return;
+    }
+
+    res.status(200).json(updatedCategory);
   } catch (error) {
     res.status(409).json({ message: error.message });
   }

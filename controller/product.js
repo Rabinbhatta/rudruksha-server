@@ -13,10 +13,12 @@ export const createProduct = async (req, res) => {
       weight,
       size,
       stock,
+      subCategory,
     } = req.body;
     const isSale = req.body.isSale == "true";
     const isTopSelling = req.body.isSale == "true";
     const isSpecial = req.body.isSpecial == "true";
+    const isExclusive = req.body.isExclusive == "true";
 
     // Check if files were uploaded
     if (!req.files || !req.files.img) {
@@ -51,6 +53,8 @@ export const createProduct = async (req, res) => {
       weight,
       size,
       stock,
+      subCategory,
+      isExclusive,
     });
 
     // Save the product to the database
@@ -92,6 +96,8 @@ export const editProduct = async (req, res) => {
       isSpecial,
       country,
       stock,
+      isExclusive,
+      subCategory,
       removedImages = "[]", // Default to empty array string
     } = req.body;
 
@@ -173,6 +179,8 @@ export const editProduct = async (req, res) => {
         faces,
         isSpecial: isSpecial === "True",
         country,
+        isExclusive: isExclusive === "True",
+        subCategory,
         stock: Number(stock),
       },
       { new: true, runValidators: true }
