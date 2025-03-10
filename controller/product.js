@@ -171,7 +171,7 @@ export const editProduct = async (req, res) => {
       id,
       {
         name,
-        price: Number(price),
+        price: price,
         category,
         img: updatedImg,
         description,
@@ -181,7 +181,7 @@ export const editProduct = async (req, res) => {
         country,
         isExclusive: isExclusive === "True",
         subCategory,
-        stock: Number(stock),
+        stock: stock,
       },
       { new: true, runValidators: true }
     );

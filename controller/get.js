@@ -36,9 +36,9 @@ export const getProducts = async (req, res) => {
     order = "asc",
     page = 1,
     limit = 8,
-    filterBy,
+    excludeId,
+    filterBy, // Now supports multiple filters
     filterValue,
-    excludeId, // Add excludeId to query parameters
   } = req.query;
 
   try {
@@ -50,44 +50,56 @@ export const getProducts = async (req, res) => {
     const limitNumber = parseInt(limit, 10) || 8;
     const skip = (pageNumber - 1) * limitNumber;
 
-    // Build the match stage with filters
+    // Build the match stage dynamically
     const matchStage = {};
 
     if (excludeId) {
-      // Exclude the product with the specified ID
       matchStage._id = { $ne: excludeId };
     }
 
     if (filterBy && filterValue) {
-      switch (filterBy) {
-        case "priceRange":
-          const [minPrice, maxPrice] = filterValue.split(",").map(parseFloat);
-          matchStage.priceNumeric = { $gte: minPrice, $lte: maxPrice };
-          break;
-        case "category":
-          matchStage.category = { $in: filterValue.split(",") };
-          break;
-        case "country":
-          matchStage.country = { $in: filterValue.split(",") };
-          break;
-        case "size":
-          matchStage.size = { $in: filterValue.split(",") };
-          break;
-        case "faces":
-          matchStage.facesNumeric = parseInt(filterValue, 10);
-          break;
-        case "sale":
-          matchStage.isSale = filterValue === "true";
-          break;
-        case "special":
-          matchStage.isSpecial = filterValue === "true";
-          break;
-        case "topSelling":
-          matchStage.isTopSelling = filterValue === "true";
-          break;
-        default:
-          break;
-      }
+      const filters = filterBy.split(",");
+      const values = filterValue.split(",");
+
+      filters.forEach((filter, index) => {
+        const value = values[index];
+
+        switch (filter) {
+          case "priceRange":
+            const [minPrice, maxPrice] = value.split("-").map(parseFloat);
+            matchStage.priceNumeric = { $gte: minPrice, $lte: maxPrice };
+            break;
+          case "category":
+            matchStage.category = { $in: value.split("|") };
+            break;
+          case "subCategory":
+            matchStage.subCategory = { $in: value.split("|") };
+            break;
+          case "country":
+            matchStage.country = { $in: value.split("|") };
+            break;
+          case "size":
+            matchStage.size = { $in: value.split("|") };
+            break;
+          case "faces":
+            matchStage.facesNumeric = parseInt(value, 10);
+            break;
+          case "sale":
+            matchStage.isSale = value === "true";
+            break;
+          case "special":
+            matchStage.isSpecial = value === "true";
+            break;
+          case "topSelling":
+            matchStage.isTopSelling = value === "true";
+            break;
+          case "exclusive":
+            matchStage.isExclusive = value === "true";
+            break;
+          default:
+            break;
+        }
+      });
     }
 
     // Fetch products with filtering, sorting, and pagination
