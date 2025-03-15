@@ -1,5 +1,4 @@
 import mongoose, { SchemaType } from "mongoose";
-import jwt from "jsonwebtoken";
 
 const UserSchema = mongoose.Schema({
   fullName: {

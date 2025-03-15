@@ -14,22 +14,57 @@ dotenv.config();
 export const register = async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (user) {
-      res.status(404).json({ error: "Email already used!!" });
-    } else {
-      const passwordhash = await bcrypt.hash(password, 10);
-      const newUser = new User({
-        fullName,
-        email,
-        password: passwordhash,
-      });
-      const savedUser = await newUser.save();
+    let user = await User.findOne({ email });
 
-      res.status(201).json({ savedUser });
+    if (user) {
+      return res.status(400).json({ error: "Email already used!" });
     }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Generate OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+
+    // Create user but don't verify yet
+    const newUser = new User({
+      fullName,
+      email,
+      password: passwordHash,
+      otp,
+      otpExpires,
+      isVerified: false, // Mark as unverified initially
+    });
+
+    await newUser.save();
+
+    // Send OTP Email
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Verify Your Email OTP",
+      text: `Your OTP code is: ${otp}`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res
+      .status(201)
+      .json({ message: "OTP sent to email. Verify within 10 mins!" });
+
+    // Schedule deletion if not verified within 10 minutes
+    setTimeout(async () => {
+      const checkUser = await User.findOne({ email });
+      if (checkUser && !checkUser.isVerified) {
+        await User.deleteOne({ email });
+        console.log(
+          `User with email ${email} deleted due to OTP not being verified.`
+        );
+      }
+    }, 2 * 60 * 1000); // 10 minutes
   } catch (error) {
-    res.status(404).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
