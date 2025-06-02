@@ -17,6 +17,10 @@ const UserSchema = mongoose.Schema({
     max: 40,
     required: true,
   },
+  wishlist: {
+    type: [SchemaType.ObjectId],
+    ref: "Product", // Reference to the Product model
+  },
   otp: { type: String },
   otpExpires: { type: Date },
   isVerified: { type: Boolean, default: false },

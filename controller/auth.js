@@ -338,3 +338,62 @@ export const adminRegister = async (req, res) => {
     res.status(404).json({ error: error.message });
   }
 };
+
+export const addToWishlist = async (req, res) => {
+  try {
+    const { userId, productsId } = req.body;
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(204).json({ message: "User not found" });
+    }
+
+    // Check if product is already in wishlist
+    if (user.wishlist.includes(productsId)) {
+      return res.status(203).json({ message: "Product already in wishlist" });
+    }
+    for (const productId of productsId) {
+      user.wishlist.push(productId);
+    }
+    await user.save();
+    return res.status(202).json({ message: "Product added to wishlist" });
+  } catch (error) {
+    res.status(404).json({ error: error.message });
+  }
+};
+
+export const removeFromWishlist = async (req, res) => {
+  try {
+    const { userId, productId } = req.params;
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(204).json({ message: "User not found" });
+    }
+
+    // Check if product is in wishlist
+    if (!user.wishlist.includes(productId)) {
+      return res.status(203).json({ message: "Product not found in wishlist" });
+    }
+
+    user.wishlist = user.wishlist.filter((id) => id.toString() !== productId);
+    await user.save();
+    return res.status(202).json({ message: "Product deleted form wishlist" });
+  } catch (error) {
+    return res.status(404).json({ error: error.message });
+  }
+};
+
+export const getWishlistByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).populate("wishlist");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (user.wishlist.length === 0) {
+      return res.status(204).json({ message: "Wishlist is empty" });
+    }
+    return res.status(200).json({ wishlist: user.wishlist });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};

@@ -10,7 +10,11 @@ import {
   emailVerify,
   adminLogin,
   adminRegister,
+  addToWishlist,
+  removeFromWishlist,
+  getWishlistByUserId,
 } from "../controller/auth.js";
+import { get } from "mongoose";
 
 const router = express.Router();
 
@@ -24,5 +28,8 @@ router.post("/resetPassword", resetPassword);
 router.post("/verifyEmail", emailVerify);
 router.post("/admin/login", adminLogin);
 router.post("/admin/register", adminRegister);
+router.post("/addwishlist", addToWishlist);
+router.delete("/deletewishlist/:userId/:productId", removeFromWishlist);
+router.get("/wishlist/:userId", getWishlistByUserId);
 
 export default router;
