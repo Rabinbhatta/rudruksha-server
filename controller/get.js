@@ -40,7 +40,7 @@ export const getProducts = async (req, res) => {
     filterBy, // Now supports multiple filters
     filterValue,
   } = req.query;
-
+  console.log(req.query);
   try {
     // Determine sort order
     const sortOrder = order === "desc" ? -1 : 1;
@@ -140,7 +140,7 @@ export const getProducts = async (req, res) => {
       },
     ]);
 
-    const totalCount = await Product.countDocuments(matchStage);
+    const totalCount = await Product.countDocuments(matchStage).populate("variants").populate("defaultVariant");
 
     res.status(200).json({
       products,
@@ -158,15 +158,27 @@ export const getProducts = async (req, res) => {
   }
 };
 
-export const getProduct = async (req, res) => {
+export const getProductBySlug = async (req, res) => {
+  const { slug } = req.params; // assuming slug comes from the URL: /products/:slug
+
   try {
-    const id = req.params.id;
-    const product = await Product.findById(id); // Await the query
-    if (!product) {
-      return res.status(404).json({ msg: "No data found" }); // Use 404 for empty data
+    // Find the product by slug
+    let product = await Product.findOne({ slug });
+
+    if(!product) {
+      product = await Product.findById(slug);
     }
-    return res.status(200).json({ product }); // Use 200 for success
+
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.status(200).json({ product });
   } catch (error) {
-    return res.status(500).json({ msg: error.message }); // 500 for server error
+    console.error("Error fetching product by slug:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while fetching the product." });
   }
 };
