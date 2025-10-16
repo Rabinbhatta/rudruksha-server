@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import slugify from "slugify";
 
 const ProductSchema = mongoose.Schema({
   title: {
@@ -21,10 +22,12 @@ const ProductSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  size: {
-    type: String,
-    required: true,
-  },
+  size: [
+    {
+      name: { type: String },
+      price: { type: Number },
+    }
+  ],
   isSale: {
     type: Boolean,
     required: true,
@@ -61,6 +64,23 @@ const ProductSchema = mongoose.Schema({
     type: Boolean,
     required: true,
   },
+  slug :{
+    type: String,
+    unique: true,
+  },
+  keywords: {
+    type: Array,
+  },
+  discount:[{title: String, percentage: Number}],
+  defaultVariant: { type: mongoose.Schema.Types.ObjectId, ref: 'Variant'  },
+  variants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Variant' }],
+});
+
+ProductSchema.pre("save", function (next) {
+  if (this.isModified("title")) {
+    this.slug = slugify(this.title, { lower: true, strict: true });
+  }
+  next();
 });
 
 const Product = mongoose.model("Product", ProductSchema);

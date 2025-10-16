@@ -1,5 +1,6 @@
+import mongoose from "mongoose";
 import Product from "../models/product.js";
-import { v2 as cloudinary } from "cloudinary";
+import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
 
 export const createProduct = async (req, res) => {
   try {
@@ -11,39 +12,76 @@ export const createProduct = async (req, res) => {
       faces,
       country,
       weight,
-      size,
       stock,
+      defaultVariant,
       subCategory,
+      keywords, // comma-separated string
+      size // expected JSON string or array
     } = req.body;
-    const isSale = req.body.isSale == "true";
-    const isTopSelling = req.body.isSale == "true";
-    const isSpecial = req.body.isSpecial == "true";
-    const isExclusive = req.body.isExclusive == "true";
 
-    // Check if files were uploaded
+    let { discount } = req.body;
+    let { variants } = req.body;
+
+    const isSale = req.body.isSale === "true";
+    const isTopSelling = req.body.isTopSelling === "true";
+    const isSpecial = req.body.isSpecial === "true";
+    const isExclusive = req.body.isExclusive === "true";
+
+    // ✅ Convert keywords to array
+    const keywordsArray = keywords
+      ? keywords.split(",").map((k) => k.trim())
+      : [];
+
+    // ✅ Convert size field into array of objects [{name, price}]
+    let parsedSizes = [];
+    if (size) {
+      try {
+        if (typeof size === "string") {
+          parsedSizes = JSON.parse(size); 
+        } else {
+          parsedSizes = size;
+        }
+      } catch (err) {
+        return res
+          .status(400)
+          .json({ message: "Invalid size format. Expecting JSON." });
+      }
+    }
+
+    if (!Array.isArray(parsedSizes) || parsedSizes.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Size must be a non-empty array." });
+    }
+
+    // ✅ File check
     if (!req.files || !req.files.img) {
       return res.status(404).json({ message: "No files uploaded" });
     }
 
-    // Handle single or multiple images
-    const files = Array.isArray(req.files.img)
-      ? req.files.img
-      : [req.files.img];
+    const files = Array.isArray(req.files.img) ? req.files.img : [req.files.img];
 
-    // Upload all images to Cloudinary
     const uploadResults = await Promise.all(
-      files.map((file) => cloudinary.uploader.upload(file.tempFilePath))
+      files.map((file) => uploadToCloudinary(file.tempFilePath))
     );
 
-    // Get the secure URLs of uploaded images
-    const imageUrls = uploadResults.map((result) => result.secure_url);
+    const imageUrls = uploadResults.map((result) => result);
 
-    // Create a new product
+    if (discount && typeof discount === 'string') {
+  discount = JSON.parse(discount)
+}
+      if (variants && typeof variants === 'string') {
+  variants = JSON.parse(variants)
+
+}
+
+
+    // ✅ Create product with new `size` format
     const product = new Product({
       title,
       price,
       category,
-      img: imageUrls, // Store all image URLs in an array
+      img: imageUrls,
       description,
       isSale,
       faces,
@@ -51,25 +89,39 @@ export const createProduct = async (req, res) => {
       country,
       isTopSelling,
       weight,
-      size,
+      size: parsedSizes, // << here
       stock,
       subCategory,
       isExclusive,
+      keywords: keywordsArray,
+      variants,
+      defaultVariant,
+      discount
     });
 
-    // Save the product to the database
     const savedProduct = await product.save();
-
     res.status(201).json({ savedProduct });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "An error occurred", error });
   }
 };
 
+
 export const deleteProduct = async (req, res) => {
   try {
     const id = req.params.id;
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found!!" });
+    }
+    // Delete images from Cloudinary
+    await Promise.all(
+      product.img.map(async (url) => {
+        await deleteFromCloudinary(url);
+      })
+    );
     const user = await Product.findByIdAndDelete(id);
     if (!user) {
       res.status(404).json({ error: "Product not found!!" });
@@ -85,37 +137,69 @@ export const editProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Parse request body and handle removed images
-    const {
-      name,
+    // ✅ Parse all incoming fields like in createProduct
+    let {
+      title,
       price,
       category,
       description,
-      isSale,
       faces,
-      isSpecial,
       country,
+      weight,
       stock,
-      isExclusive,
+      defaultVariant,
       subCategory,
-      removedImages = "[]", // Default to empty array string
+      keywords,
+      size,
+      discount,
+      variants,
+      removedImages = "[]"
     } = req.body;
 
-    // Safely parse removed images
+    const isSale = req.body.isSale === "true";
+    const isTopSelling = req.body.isTopSelling === "true";
+    const isSpecial = req.body.isSpecial === "true";
+    const isExclusive = req.body.isExclusive === "true";
+
+    // ✅ Convert keywords (comma-separated) to array
+    const keywordsArray = keywords
+      ? keywords.split(",").map((k) => k.trim())
+      : [];
+
+    // ✅ Parse size field
+    let parsedSizes = [];
+    if (size) {
+      try {
+        parsedSizes = typeof size === "string" ? JSON.parse(size) : size;
+      } catch {
+        return res
+          .status(400)
+          .json({ message: "Invalid size format. Expecting JSON." });
+      }
+    }
+
+    // ✅ Parse discount & variants if sent as string
+    if (discount && typeof discount === "string") {
+      discount = JSON.parse(discount);
+    }
+    if (variants && typeof variants === "string") {
+      variants = JSON.parse(variants);
+    }
+
+    // ✅ Parse removed images
     const parsedRemovedImages = JSON.parse(removedImages);
 
-    // Validate product existence first
+    // ✅ Check if product exists
     const existingProduct = await Product.findById(id);
     if (!existingProduct) {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    // Handle image removal from Cloudinary
+    // ✅ Remove old images if provided
     if (parsedRemovedImages?.length > 0) {
       try {
         await Promise.all(
           parsedRemovedImages.map(async (url) => {
-            // Improved public ID extraction
             const publicId = url.match(/\/([^/]+)\.[a-z]+$/)?.[1];
             if (publicId) {
               await cloudinary.uploader.destroy(publicId);
@@ -131,19 +215,16 @@ export const editProduct = async (req, res) => {
       }
     }
 
-    // Handle new image uploads
+    // ✅ Upload new images if provided
     let newImageUrls = [];
-    if (req.files?.imgFile) {
+    if (req.files?.img) {
       try {
-        const files = Array.isArray(req.files.imgFile)
-          ? req.files.imgFile
-          : [req.files.imgFile];
+        const files = Array.isArray(req.files.img)
+          ? req.files.img
+          : [req.files.img];
 
         newImageUrls = await Promise.all(
-          files.map(async (file) => {
-            const result = await cloudinary.uploader.upload(file.tempFilePath);
-            return result.secure_url;
-          })
+          files.map((file) => uploadToCloudinary(file.tempFilePath))
         );
       } catch (uploadError) {
         console.error("Image upload error:", uploadError);
@@ -154,7 +235,7 @@ export const editProduct = async (req, res) => {
       }
     }
 
-    // Combine and validate images
+    // ✅ Merge old + new images
     const updatedImg = [
       ...existingProduct.img.filter(
         (url) => !parsedRemovedImages.includes(url)
@@ -166,22 +247,29 @@ export const editProduct = async (req, res) => {
       return res.status(400).json({ error: "Maximum 4 images allowed" });
     }
 
-    // Update product with converted boolean values
+    // ✅ Update product
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
       {
-        name,
-        price: price,
+        title,
+        price,
         category,
         img: updatedImg,
         description,
-        isSale: isSale === "True",
+        isSale,
         faces,
-        isSpecial: isSpecial === "True",
+        isSpecial,
         country,
-        isExclusive: isExclusive === "True",
+        isTopSelling,
+        weight,
+        size: parsedSizes,
+        stock,
         subCategory,
-        stock: stock,
+        isExclusive,
+        keywords: keywordsArray,
+        variants,
+        defaultVariant,
+        discount
       },
       { new: true, runValidators: true }
     );
@@ -199,20 +287,25 @@ export const editProduct = async (req, res) => {
   }
 };
 
+
 export const searchProduct = async (req, res) => {
   try {
     const { title = " ", page = 1, limit = 8 } = req.query;
-    const parsedTitle = isNaN(title) ? title : title.toString();
+    const parsedTitle = title.toString();
+
     const products = await Product.find({
       $or: [
         { title: { $regex: parsedTitle, $options: "i" } },
         { description: { $regex: parsedTitle, $options: "i" } },
+        { keywords: { $in: [new RegExp(parsedTitle, "i")] } }, // search in keywords array
       ],
     })
-      .skip((page - 1) * limit)
-      .limit(limit);
+      .skip((page - 1) * parseInt(limit, 10))
+      .limit(parseInt(limit, 10));
+
     res.status(200).json({ products });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
