@@ -163,10 +163,10 @@ export const getProductBySlug = async (req, res) => {
 
   try {
     // Find the product by slug
-    let product = await Product.findOne({ slug });
+    let product = await Product.findOne({ slug }).populate("variants").populate("defaultVariant");
 
     if(!product) {
-      product = await Product.findById(slug);
+      product = await Product.findById(slug).populate("variants").populate("defaultVariant");
     }
 
 
