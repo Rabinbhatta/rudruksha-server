@@ -37,33 +37,26 @@ export const getProducts = async (req, res) => {
     page = 1,
     limit = 8,
     excludeId,
-    filterBy, // Now supports multiple filters
+    filterBy,
     filterValue,
   } = req.query;
-  console.log(req.query);
-  try {
-    // Determine sort order
-    const sortOrder = order === "desc" ? -1 : 1;
 
-    // Parse pagination parameters
+  try {
+    const sortOrder = order === "desc" ? -1 : 1;
     const pageNumber = parseInt(page, 10) || 1;
     const limitNumber = parseInt(limit, 10) || 8;
     const skip = (pageNumber - 1) * limitNumber;
 
-    // Build the match stage dynamically
+    // MATCH STAGE
     const matchStage = {};
-
     if (excludeId) {
       matchStage._id = { $ne: excludeId };
     }
-
     if (filterBy && filterValue) {
       const filters = filterBy.split(",");
       const values = filterValue.split(",");
-
-      filters.forEach((filter, index) => {
-        const value = values[index];
-
+      filters.forEach((filter, idx) => {
+        const value = values[idx];
         switch (filter) {
           case "priceRange":
             const [minPrice, maxPrice] = value.split("-").map(parseFloat);
@@ -96,13 +89,10 @@ export const getProducts = async (req, res) => {
           case "exclusive":
             matchStage.isExclusive = value === "true";
             break;
-          default:
-            break;
         }
       });
     }
 
-    // Fetch products with filtering, sorting, and pagination
     const products = await Product.aggregate([
       {
         $addFields: {
@@ -120,8 +110,28 @@ export const getProducts = async (req, res) => {
           },
         },
       },
+      { $match: matchStage },
       {
-        $match: matchStage,
+        $lookup: {
+          from: "variants",
+          localField: "variants",
+          foreignField: "_id",
+          as: "variants",
+        },
+      },
+      {
+        $lookup: {
+          from: "variants",
+          localField: "defaultVariant",
+          foreignField: "_id",
+          as: "defaultVariant",
+        },
+      },
+      {
+        $unwind: {
+          path: "$defaultVariant",
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $sort: {
@@ -132,15 +142,11 @@ export const getProducts = async (req, res) => {
             : "priceNumeric"]: sortOrder,
         },
       },
-      {
-        $skip: skip,
-      },
-      {
-        $limit: limitNumber,
-      },
+      { $skip: skip },
+      { $limit: limitNumber },
     ]);
 
-    const totalCount = await Product.countDocuments(matchStage).populate("variants").populate("defaultVariant");
+    const totalCount = await Product.countDocuments(matchStage);
 
     res.status(200).json({
       products,
@@ -157,6 +163,7 @@ export const getProducts = async (req, res) => {
       .json({ error: "An error occurred while fetching products." });
   }
 };
+
 
 export const getProductBySlug = async (req, res) => {
   const { slug } = req.params; // assuming slug comes from the URL: /products/:slug
