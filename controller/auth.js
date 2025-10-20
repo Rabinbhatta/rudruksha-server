@@ -341,32 +341,36 @@ export const adminRegister = async (req, res) => {
 
 export const addToWishlist = async (req, res) => {
   try {
-    const { userId, productsId } = req.body;
+    const { productId } = req.body;
+    const userId = req.userId; // ✅ use req instead of res
     const user = await User.findById(userId);
+
     if (!user) {
-      res.status(204).json({ message: "User not found" });
+      return res.status(404).json({ message: "User not found" }); // ✅ return added
     }
 
     // Check if product is already in wishlist
-    if (user.wishlist.includes(productsId)) {
-      return res.status(203).json({ message: "Product already in wishlist" });
+    if (user.wishlist.includes(productId)) {
+      return res.status(409).json({ message: "Product already in wishlist" }); // ✅ return added
     }
-    for (const productId of productsId) {
-      user.wishlist.push(productId);
-    }
+
+    user.wishlist.push(productId);
     await user.save();
-    return res.status(202).json({ message: "Product added to wishlist" });
+
+    return res.status(200).json({ message: "Product added to wishlist" }); // ✅ return already exists
   } catch (error) {
-    res.status(404).json({ error: error.message });
+    return res.status(500).json({ error: error.message }); // ✅ return added
   }
 };
 
+
 export const removeFromWishlist = async (req, res) => {
   try {
-    const { userId, productId } = req.params;
+    const {  productId } = req.params;
+    const userId = req.userId;
     const user = await User.findById(userId);
     if (!user) {
-      res.status(204).json({ message: "User not found" });
+      return res.status(204).json({ message: "User not found" });
     }
 
     // Check if product is in wishlist
@@ -376,7 +380,7 @@ export const removeFromWishlist = async (req, res) => {
 
     user.wishlist = user.wishlist.filter((id) => id.toString() !== productId);
     await user.save();
-    return res.status(202).json({ message: "Product deleted form wishlist" });
+    return res.status(202).json({ message: "Product deleted from wishlist" });
   } catch (error) {
     return res.status(404).json({ error: error.message });
   }
@@ -384,16 +388,20 @@ export const removeFromWishlist = async (req, res) => {
 
 export const getWishlistByUserId = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.userId;
     const user = await User.findById(userId).populate("wishlist");
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    if (user.wishlist.length === 0) {
-      return res.status(204).json({ message: "Wishlist is empty" });
+
+    if (!user.wishlist || user.wishlist.length === 0) {
+      return res.status(200).json({ wishlist: [] }); // ✅ return empty list instead of 204
     }
+
     return res.status(200).json({ wishlist: user.wishlist });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };
+

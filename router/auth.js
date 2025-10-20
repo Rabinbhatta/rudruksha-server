@@ -14,7 +14,7 @@ import {
   removeFromWishlist,
   getWishlistByUserId,
 } from "../controller/auth.js";
-import { get } from "mongoose";
+import { jwt_verify } from "../middleware/verify.js";
 
 const router = express.Router();
 
@@ -28,8 +28,8 @@ router.post("/resetPassword", resetPassword);
 router.post("/verifyEmail", emailVerify);
 router.post("/admin/login", adminLogin);
 router.post("/admin/register", adminRegister);
-router.post("/addwishlist", addToWishlist);
-router.delete("/deletewishlist/:userId/:productId", removeFromWishlist);
-router.get("/wishlist/:userId", getWishlistByUserId);
+router.post("/addwishlist", jwt_verify, addToWishlist);
+router.delete("/deletewishlist/:productId",jwt_verify, removeFromWishlist);
+router.get("/wishlist", jwt_verify, getWishlistByUserId);
 
 export default router;
