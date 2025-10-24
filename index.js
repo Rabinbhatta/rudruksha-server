@@ -19,6 +19,7 @@ import variantRoute from "./router/variant.js";
 import blogRoute from "./router/blog.js";
 import promocodeRoute from "./router/promocode.js";
 import orderRoute from "./router/order.js";
+import eventRoute from "./router/events.js";
 
 const app = express();
 const https = createServer(app);
@@ -58,6 +59,7 @@ app.use("/variant", variantRoute);
 app.use("/blog", blogRoute);
 app.use("/promocode", promocodeRoute);
 app.use("/order", orderRoute);
+app.use("/event", eventRoute);
 
 cloudinary.config({
   cloud_name: process.env.cloudinary_cloud_name,
