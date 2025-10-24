@@ -156,10 +156,10 @@ export const editProduct = async (req, res) => {
       removedImages = "[]"
     } = req.body;
 
-    const isSale = req.body.isSale === "true";
-    const isTopSelling = req.body.isTopSelling === "true";
-    const isSpecial = req.body.isSpecial === "true";
-    const isExclusive = req.body.isExclusive === "true";
+    const isSale = req.body.isSale === "true" || req.body.isSale === "True";
+    const isTopSelling = req.body.isTopSelling === "true" || req.body.isTopSelling === "True";
+    const isSpecial = req.body.isSpecial === "true" || req.body.isSpecial === "True";
+    const isExclusive = req.body.isExclusive === "true" || req.body.isExclusive === "True";
 
     // ✅ Convert keywords (comma-separated) to array
     const keywordsArray = keywords
@@ -290,22 +290,43 @@ export const editProduct = async (req, res) => {
 
 export const searchProduct = async (req, res) => {
   try {
-    const { title = " ", page = 1, limit = 8 } = req.query;
-    const parsedTitle = title.toString();
+    const { title = "", page = 1, limit = 8 } = req.query;
+    const searchTerm = title.trim();
 
-    const products = await Product.find({
+    const regex = new RegExp(searchTerm, "i");
+
+    // Proper query for string arrays
+    const query = {
       $or: [
-        { title: { $regex: parsedTitle, $options: "i" } },
-        { description: { $regex: parsedTitle, $options: "i" } },
-        { keywords: { $in: [new RegExp(parsedTitle, "i")] } }, // search in keywords array
+        { title: regex },
+        { description: regex },
+        { category: regex },
+        { subCategory: regex },
+        { keywords: { $regex: regex } }, // ✅ works for array of strings
       ],
-    })
-      .skip((page - 1) * parseInt(limit, 10))
-      .limit(parseInt(limit, 10));
+    };
 
-    res.status(200).json({ products });
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Run in parallel for speed
+    const [products, totalCount] = await Promise.all([
+      Product.find(query).skip(skip).limit(parseInt(limit)).lean(),
+      Product.countDocuments(query),
+    ]);
+
+    res.status(200).json({
+      products,
+      pagination: {
+        total: totalCount,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(totalCount / parseInt(limit)),
+      },
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Error searching products", error: error.message });
   }
 };
+
+
 
