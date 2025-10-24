@@ -85,6 +85,9 @@ export const applyPromocode = async (req, res) => {
         if (promo.usedCount.includes(userId) && order) {
             return res.status(400).json({ message: "You have already used this promocode" });
         }
+        if(promo.usedCount.includes(userId)) {
+            return res.status(200).json({ message: "Promocode applied successfully", promo });
+        }
         promo.usedCount.push(userId);
         await promo.save();
         res.status(200).json({ message: "Promocode applied successfully", promo });
