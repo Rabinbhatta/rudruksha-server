@@ -382,3 +382,35 @@ export const getOrdersByUserId = async (req, res) => {
     });
   }
 };
+
+
+export const deleteOrdersByUserId = async (req,res) => {
+  try {
+    const userId = req.userId;
+    const orderId = req.params.orderId;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid user ID");
+    }
+
+    const order = await Order.findOne({ userId, _id: orderId });
+    if (!order) {
+      return res.status(404).json({message: "Order not found for this user"});
+    }
+    if(order.orderStatus != "Pending"){
+      return res.status(400).json({message: "Only pending orders can be cancelled"});
+    }
+    order.orderStatus = "Cancelled";
+    const result =  await order.save();
+    res.status(200).json({
+      success: true,
+      message: "Orders cancelled successfully",
+      data: result,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error deleting orders",
+      error: error.message,
+    });
+  }
+};
