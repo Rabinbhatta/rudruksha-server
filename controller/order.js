@@ -353,20 +353,49 @@ export const getOrdersByUserId = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
+    // Fetch orders and populate product & variant references
     const orders = await Order.find({ userId })
-      .populate("products.productId", "name price images")
+      .populate("products.productId", "title price img size") // include size array
       .populate("products.variant", "name")
-      .populate("products.size", "name")
       .populate("promocode", "code discount")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Map each order to include the actual size info
+    const ordersWithSizeDetails = orders.map((order) => {
+      const updatedProducts = order.products.map((item) => {
+        let sizeDetails = null;
+
+        // Find the size from the product's size array using the saved _id
+        if (item.size && item.productId && item.productId.size) {
+          const foundSize = item.productId.size.id(item.size);
+          if (foundSize) {
+            sizeDetails = {
+              id: foundSize._id,
+              name: foundSize.name,
+              price: foundSize.price,
+            };
+          }
+        }
+
+        return {
+          ...item.toObject(),
+          size: sizeDetails,
+        };
+      });
+
+      return {
+        ...order.toObject(),
+        products: updatedProducts,
+      };
+    });
+
     const totalOrders = await Order.countDocuments({ userId });
 
     res.status(200).json({
       success: true,
-      data: orders,
+      data: ordersWithSizeDetails,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(totalOrders / limit),
@@ -382,6 +411,7 @@ export const getOrdersByUserId = async (req, res) => {
     });
   }
 };
+
 
 
 export const deleteOrdersByUserId = async (req,res) => {
