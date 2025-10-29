@@ -11,7 +11,7 @@ const orderSchema = new mongoose.Schema({
             productId : { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
             quantity : { type: Number, required: true, default: 1 },
             variant: {type: mongoose.Schema.Types.ObjectId, ref: 'Variant' },
-            size: {type: mongoose.Schema.Types.ObjectId, ref: 'Size' }
+            size: {type: mongoose.Schema.Types.ObjectId },
         }
     ],
     totalAmout: { type: Number, required: true },
