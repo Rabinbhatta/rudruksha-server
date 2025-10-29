@@ -328,5 +328,26 @@ export const searchProduct = async (req, res) => {
   }
 };
 
+export const toggleProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { field } = req.body;
+    const validFields = ["isSale", "isTopSelling", "isSpecial", "isExclusive"];
+
+    if (!validFields.includes(field)) {
+      return res.status(400).json({ message: "Invalid field to toggle" });
+    }
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    product[field] = !product[field];
+    await product.save();
+    res.status(200).json({ message: `Product ${field} toggled`, product });
+  } catch (error) {
+    res.status(500).json({ message: "Error toggling product field", error: error.message });
+  }
+};
+
 
 
