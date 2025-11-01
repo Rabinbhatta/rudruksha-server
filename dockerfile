@@ -1,23 +1,23 @@
 # Use a lightweight Node.js image
 FROM node:20-alpine
 
-# Set working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# Copy package files first (for efficient caching)
+# Copy package files
 COPY package*.json ./
 
-# Install only production dependencies
+# Install dependencies (only prod)
 RUN npm install --omit=dev
 
-# Copy the rest of your code
+# Copy rest of the files
 COPY . .
 
-# Set environment variable for production
+# Set environment
 ENV NODE_ENV=production
 
-# Expose port 8080 (Cloud Run expects this)
+# Expose port for Cloud Run
 EXPOSE 8080
 
-# Start the server
-CMD ["node", "index.js"]
+# Start server
+CMD ["npm", "start"]
