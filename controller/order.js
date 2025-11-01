@@ -94,8 +94,8 @@ export const getAllOrders = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const orders = await Order.find(filter)
-      .populate("userId", "name email")
-      .populate("products.productId", "name price")
+      .populate("userId", "fullName email")
+      .populate("products.productId")
       .populate("products.variant", "name")
       .populate("products.size", "name")
       .populate("promocode", "code discount")
