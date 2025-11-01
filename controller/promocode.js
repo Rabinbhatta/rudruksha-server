@@ -35,15 +35,16 @@ export const deletePromocode = async (req, res) => {
 export const editPromocode = async (req, res) => {
     try {
         const { id } = req.params;
-        const { code, discount, isActive, usageLimit, applicableProducts } = req.body;
+        const { code, isActive, usageLimit, discountAmount , discountPercentage} = req.body;
         const updatedPromo = await PromoCode.findByIdAndUpdate(
             id,
             {
                 code,
-                discountPercentage: discount,
+                discountPercentage,
+                discountAmount,
                 isActive,
                 usageLimit: usageLimit || null,
-                applicableProducts
+                
             },
             { new: true }
         );;
