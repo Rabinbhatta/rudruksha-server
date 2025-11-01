@@ -74,7 +74,7 @@ mongoose.set("strictQuery", true);
 mongoose
   .connect(process.env.MONGODB)
   .then(() =>
-    https.listen(process.env.PORT, () =>
+    https.listen(8000 || 8080, () =>
       console.log(`Server is listening at ${process.env.PORT}`)
     )
   )
