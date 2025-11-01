@@ -77,7 +77,7 @@ mongoose
   .connect(process.env.MONGODB)
   .then(() =>
     https.listen(8000 || 8080, () =>
-      console.log(`Server is listening at ${process.env.PORT}`)
+      console.log(`Server is listening at ${8000 || 8080}`)
     )
   )
   .catch((error) => console.log(error.message));
