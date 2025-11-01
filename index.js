@@ -25,6 +25,7 @@ import dashboardRoute from "./router/dashboard.js";
 
 const app = express();
 const https = createServer(app);
+const PORT = 8000 || 8080;
 
 dotenv.config();
 app.use(express.json());
@@ -76,8 +77,8 @@ mongoose.set("strictQuery", true);
 mongoose
   .connect(process.env.MONGODB)
   .then(() =>
-    https.listen(8000 || 8080, () =>
-      console.log(`Server is listening at ${8000 || 8080}`, "Server is listening at 8000 or 8080!yesss")
+    https.listen(PORT, () =>
+      console.log(`Server is listening at ${PORT}`, "Server is listening at 8000 or 8080!yesss")
   
   )
   .catch((error) => console.log(error.message)))
