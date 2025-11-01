@@ -21,6 +21,7 @@ import promocodeRoute from "./router/promocode.js";
 import orderRoute from "./router/order.js";
 import eventRoute from "./router/events.js";
 import uploadRoute from "./router/upload.js";
+import dashboardRoute from "./router/dashboard.js";
 
 const app = express();
 const https = createServer(app);
@@ -62,6 +63,7 @@ app.use("/promocode", promocodeRoute);
 app.use("/order", orderRoute);
 app.use("/event", eventRoute);
 app.use("", uploadRoute);
+app.use("/dashboard", dashboardRoute);
 
 cloudinary.config({
   cloud_name: process.env.cloudinary_cloud_name,
