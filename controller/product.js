@@ -1,6 +1,5 @@
 import Product from "../models/product.js";
 import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
-import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
 
 export const createProduct = async (req, res) => {
   try {
