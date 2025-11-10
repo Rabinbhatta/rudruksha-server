@@ -7,8 +7,7 @@ const ProductSchema = mongoose.Schema({
     required: true,
   },
   price: {
-    type: String,
-    required: true,
+    type: Number,
   },
   category: {
     type: String,
@@ -26,6 +25,12 @@ const ProductSchema = mongoose.Schema({
     {
       name: { type: String },
       price: { type: Number },
+    }
+  ],
+  weightSizeOptions: [
+    {
+      weight: { type: String },
+      size: { type: String  },
     }
   ],
   isSale: {
@@ -58,7 +63,6 @@ const ProductSchema = mongoose.Schema({
   },
   subCategory: {
     type: String,
-    required: true,
   },
   isExclusive: {
     type: Boolean,

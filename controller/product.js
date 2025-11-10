@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import Product from "../models/product.js";
 import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
 
@@ -15,68 +14,86 @@ export const createProduct = async (req, res) => {
       stock,
       defaultVariant,
       subCategory,
-      keywords, // comma-separated string
-      size // expected JSON string or array
+      keywords, // comma-separated string or JSON string
+      size, // JSON string or array
+      weightSizeOptions, // NEW: JSON string or array
     } = req.body;
 
-    let { discount } = req.body;
-    let { variants } = req.body;
+    let { discount, variants } = req.body;
 
     const isSale = req.body.isSale === "true";
     const isTopSelling = req.body.isTopSelling === "true";
     const isSpecial = req.body.isSpecial === "true";
     const isExclusive = req.body.isExclusive === "true";
 
-    // ✅ Convert keywords to array
-    const keywordsArray = keywords
-      ? keywords.split(",").map((k) => k.trim())
-      : [];
-
-    // ✅ Convert size field into array of objects [{name, price}]
-    let parsedSizes = [];
-    if (size) {
+    // ✅ Parse keywords into flat array of strings
+    let parsedKeywords = [];
+    if (keywords) {
       try {
-        if (typeof size === "string") {
-          parsedSizes = JSON.parse(size); 
-        } else {
-          parsedSizes = size;
+        if (typeof keywords === "string") {
+          if (keywords.trim().startsWith("[")) {
+            parsedKeywords = JSON.parse(keywords);
+          } else {
+            parsedKeywords = keywords.split(",").map((k) => k.trim());
+          }
+        } else if (Array.isArray(keywords)) {
+          parsedKeywords = keywords.flatMap((k) =>
+            typeof k === "string" ? k.split(",").map((v) => v.trim()) : []
+          );
         }
+        parsedKeywords = parsedKeywords.map((k) => String(k));
       } catch (err) {
-        return res
-          .status(400)
-          .json({ message: "Invalid size format. Expecting JSON." });
+        return res.status(400).json({
+          message: "Invalid keywords format. Expecting JSON array or comma-separated string.",
+          details: err.message,
+        });
       }
     }
 
-    if (!Array.isArray(parsedSizes) || parsedSizes.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "Size must be a non-empty array." });
+    // ✅ Parse size field into array of objects [{name, price}]
+    let parsedSizes = [];
+    if (size) {
+      try {
+        parsedSizes = typeof size === "string" ? JSON.parse(size) : size;
+      } catch (err) {
+        return res.status(400).json({ message: "Invalid size format. Expecting JSON." });
+      }
     }
 
-    // ✅ File check
+    // ✅ Parse weightSizeOptions field into array of objects [{weight, size}]
+    let parsedWeightSizeOptions = [];
+    if (weightSizeOptions) {
+      try {
+        parsedWeightSizeOptions = typeof weightSizeOptions === "string"
+          ? JSON.parse(weightSizeOptions)
+          : weightSizeOptions;
+      } catch (err) {
+        return res.status(400).json({
+          message: "Invalid weightSizeOptions format. Expecting JSON.",
+          details: err.message,
+        });
+      }
+    }
+
+    // ✅ Parse discount and variants if they are strings
+    if (discount && typeof discount === "string") {
+      discount = JSON.parse(discount);
+    }
+    if (variants && typeof variants === "string") {
+      variants = JSON.parse(variants);
+    }
+
+    // ✅ Check uploaded files
     if (!req.files || !req.files.img) {
       return res.status(404).json({ message: "No files uploaded" });
     }
-
     const files = Array.isArray(req.files.img) ? req.files.img : [req.files.img];
-
     const uploadResults = await Promise.all(
       files.map((file) => uploadToCloudinary(file.tempFilePath))
     );
-
     const imageUrls = uploadResults.map((result) => result);
 
-    if (discount && typeof discount === 'string') {
-  discount = JSON.parse(discount)
-}
-      if (variants && typeof variants === 'string') {
-  variants = JSON.parse(variants)
-
-}
-
-
-    // ✅ Create product with new `size` format
+    // ✅ Create product
     const product = new Product({
       title,
       price,
@@ -89,24 +106,26 @@ export const createProduct = async (req, res) => {
       country,
       isTopSelling,
       weight,
-      size: parsedSizes, // << here
+      size: parsedSizes,
+      weightSizeOptions: parsedWeightSizeOptions, // NEW
       stock,
       subCategory,
       isExclusive,
-      keywords: keywordsArray,
+      keywords: parsedKeywords,
       variants,
       defaultVariant,
-      discount
+      discount,
     });
 
     const savedProduct = await product.save();
     res.status(201).json({ savedProduct });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "An error occurred", error });
   }
 };
+
+
 
 
 export const deleteProduct = async (req, res) => {
@@ -151,6 +170,7 @@ export const editProduct = async (req, res) => {
       subCategory,
       keywords,
       size,
+      weightSizeOptions, // NEW
       discount,
       variants,
       removedImages = "[]"
@@ -161,20 +181,25 @@ export const editProduct = async (req, res) => {
     const isSpecial = req.body.isSpecial === "true" || req.body.isSpecial === "True";
     const isExclusive = req.body.isExclusive === "true" || req.body.isExclusive === "True";
 
-    // ✅ Convert keywords (comma-separated) to array
-    const keywordsArray = keywords
-      ? keywords.split(",").map((k) => k.trim())
-      : [];
-
     // ✅ Parse size field
     let parsedSizes = [];
     if (size) {
       try {
         parsedSizes = typeof size === "string" ? JSON.parse(size) : size;
       } catch {
-        return res
-          .status(400)
-          .json({ message: "Invalid size format. Expecting JSON." });
+        return res.status(400).json({ message: "Invalid size format. Expecting JSON." });
+      }
+    }
+
+    // ✅ Parse weightSizeOptions field
+    let parsedWeightSizeOptions = [];
+    if (weightSizeOptions) {
+      try {
+        parsedWeightSizeOptions = typeof weightSizeOptions === "string"
+          ? JSON.parse(weightSizeOptions)
+          : weightSizeOptions;
+      } catch {
+        return res.status(400).json({ message: "Invalid weightSizeOptions format. Expecting JSON." });
       }
     }
 
@@ -184,6 +209,27 @@ export const editProduct = async (req, res) => {
     }
     if (variants && typeof variants === "string") {
       variants = JSON.parse(variants);
+    }
+
+    // ✅ Parse keywords safely (handles multiple formats)
+    if (keywords) {
+      try {
+        if (typeof keywords === "string") {
+          keywords = JSON.parse(keywords);
+        }
+        if (Array.isArray(keywords)) {
+          keywords = keywords.flatMap((k) =>
+            typeof k === "string" && k.trim().startsWith('["')
+              ? JSON.parse(k)
+              : k
+          );
+        }
+      } catch (err) {
+        return res.status(400).json({
+          message: "Invalid keywords format. Expecting JSON array of strings.",
+          details: err.message,
+        });
+      }
     }
 
     // ✅ Parse removed images
@@ -247,7 +293,7 @@ export const editProduct = async (req, res) => {
       return res.status(400).json({ error: "Maximum 4 images allowed" });
     }
 
-    // ✅ Update product
+    // ✅ Update product in DB
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
       {
@@ -263,13 +309,14 @@ export const editProduct = async (req, res) => {
         isTopSelling,
         weight,
         size: parsedSizes,
+        weightSizeOptions: parsedWeightSizeOptions, // NEW
         stock,
         subCategory,
         isExclusive,
-        keywords: keywordsArray,
+        keywords,
         variants,
         defaultVariant,
-        discount
+        discount,
       },
       { new: true, runValidators: true }
     );
@@ -286,6 +333,8 @@ export const editProduct = async (req, res) => {
     });
   }
 };
+
+
 
 
 export const searchProduct = async (req, res) => {

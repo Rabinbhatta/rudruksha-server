@@ -50,7 +50,7 @@ export const getProducts = async (req, res) => {
     // MATCH STAGE
     const matchStage = {};
     if (excludeId) {
-      matchStage._id = { $ne: excludeId };
+      matchStage._id = { $ne: mongoose.Types.ObjectId(excludeId) };
     }
     if (filterBy && filterValue) {
       const filters = filterBy.split(",");
@@ -96,8 +96,22 @@ export const getProducts = async (req, res) => {
     const products = await Product.aggregate([
       {
         $addFields: {
-          priceNumeric: { $toDouble: "$price" },
-          facesNumeric: { $toInt: "$faces" },
+          priceNumeric: {
+            $convert: {
+              input: "$price",
+              to: "double",
+              onError: 0,
+              onNull: 0,
+            },
+          },
+          facesNumeric: {
+            $convert: {
+              input: "$faces",
+              to: "int",
+              onError: 0,
+              onNull: 0,
+            },
+          },
           sizeNumeric: {
             $switch: {
               branches: [
