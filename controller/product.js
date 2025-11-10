@@ -1,5 +1,6 @@
 import Product from "../models/product.js";
 import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
+import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
 
 export const createProduct = async (req, res) => {
   try {
@@ -14,8 +15,8 @@ export const createProduct = async (req, res) => {
       stock,
       defaultVariant,
       subCategory,
-      keywords, // comma-separated string or JSON string
-      size, // JSON string or array
+      keywords, // comma-separated string
+      size, // expected JSON string or array
       weightSizeOptions, // NEW: JSON string or array
     } = req.body;
 
@@ -99,6 +100,7 @@ export const createProduct = async (req, res) => {
       price,
       category,
       img: imageUrls,
+      img: imageUrls,
       description,
       isSale,
       faces,
@@ -119,6 +121,7 @@ export const createProduct = async (req, res) => {
 
     const savedProduct = await product.save();
     res.status(201).json({ savedProduct });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "An error occurred", error });
@@ -131,6 +134,7 @@ export const createProduct = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const id = req.params.id;
+
     const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({ error: "Product not found!!" });
@@ -156,7 +160,7 @@ export const editProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ✅ Parse all incoming fields like in createProduct
+
     let {
       title,
       price,
@@ -235,6 +239,7 @@ export const editProduct = async (req, res) => {
     const parsedRemovedImages = JSON.parse(removedImages);
 
     // ✅ Check if product exists
+    // ✅ Check if product exists
     const existingProduct = await Product.findById(id);
     if (!existingProduct) {
       return res.status(404).json({ error: "Product not found" });
@@ -261,6 +266,7 @@ export const editProduct = async (req, res) => {
     }
 
     // ✅ Upload new images if provided
+    // ✅ Upload new images if provided
     let newImageUrls = [];
     if (req.files?.img) {
       try {
@@ -280,6 +286,7 @@ export const editProduct = async (req, res) => {
       }
     }
 
+    // ✅ Merge old + new images
     // ✅ Merge old + new images
     const updatedImg = [
       ...existingProduct.img.filter(
@@ -395,6 +402,7 @@ export const toggleProduct = async (req, res) => {
     res.status(500).json({ message: "Error toggling product field", error: error.message });
   }
 };
+
 
 
 

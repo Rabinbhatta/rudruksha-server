@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import slugify from "slugify";
+import slugify from "slugify";
 
 const ProductSchema = mongoose.Schema({
   title: {
@@ -81,6 +82,7 @@ ProductSchema.pre("save", function (next) {
     this.slug = slugify(this.title, { lower: true, strict: true });
   }
   next();
+  
 });
 
 const Product = mongoose.model("Product", ProductSchema);
