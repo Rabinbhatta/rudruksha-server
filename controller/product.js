@@ -164,7 +164,6 @@ export const editProduct = async (req, res) => {
       description,
       faces,
       country,
-      weight,
       stock,
       defaultVariant,
       subCategory,
@@ -307,7 +306,6 @@ export const editProduct = async (req, res) => {
         isSpecial,
         country,
         isTopSelling,
-        weight,
         size: parsedSizes,
         weightSizeOptions: parsedWeightSizeOptions, // NEW
         stock,

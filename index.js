@@ -25,6 +25,7 @@ import dashboardRoute from "./router/dashboard.js";
 
 const app = express();
 const https = createServer(app);
+const PORT = 8000 || 8080;
 
 dotenv.config();
 app.use(express.json());
@@ -74,9 +75,12 @@ mongoose.set("strictQuery", true);
 
 mongoose
   .connect(process.env.MONGODB)
-  .then(() =>
-    https.listen(process.env.PORT, () =>
-      console.log(`Server is listening at ${process.env.PORT}`)
-    )
-  )
-  .catch((error) => console.log(error.message));
+  .then(() => {
+    https.listen(PORT, "0.0.0.0", () => {
+      console.log(
+        `✅ Server running on http://0.0.0.0:${PORT} | MongoDB connected successfully`
+      );
+    });
+  })
+  .catch((error) => console.error("❌ MongoDB connection error:", error.message));
+

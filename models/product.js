@@ -49,10 +49,6 @@ const ProductSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  weight: {
-    type: String,
-    required: true,
-  },
   isTopSelling: {
     type: Boolean,
     required: true,
