@@ -36,10 +36,14 @@ export const getEvents = async (req, res) => {
 
         // Populate only the paginated products
         const populatedEvent = await Event.findById(event._id)
-          .select('title bannerPopUpImage bannerImage isActive createdAt updatedAt')
+          .select('title bannerPopUpImage bannerImage products isActive createdAt updatedAt')
           .populate({
             path: 'products',
-            match: { _id: { $in: paginatedProductIds } }
+            match: { _id: { $in: paginatedProductIds } },
+            populate: {
+              path: 'defaultVariant variants',
+              model: 'Variant'
+            }
           });
 
         return {
@@ -71,7 +75,13 @@ export const getEvents = async (req, res) => {
 export const getEventById = async (req, res) => {
   const { id } = req.params;
   try {
-    const event = await Event.findById(id).populate("products", "name price images");
+    const event = await Event.findById(id).populate({
+      path: "products",
+      populate: {
+        path: "defaultVariant variants",
+        model: "Variant"
+      }
+    });
     if (!event) {
       return res.status(404).json({ 
         success: false,
@@ -150,7 +160,13 @@ export const createEvent = async (req, res) => {
     await newEvent.save();
     
     const populatedEvent = await Event.findById(newEvent._id)
-      .populate("products", "name price images");
+      .populate({
+        path: "products",
+        populate: {
+          path: "defaultVariant variants",
+          model: "Variant"
+        }
+      });
 
     res.status(201).json({
       success: true,
@@ -231,7 +247,13 @@ export const updateEvent = async (req, res) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    ).populate("products", "name price images");
+    ).populate({
+      path: "products",
+      populate: {
+        path: "defaultVariant variants",
+        model: "Variant"
+      }
+    });
 
     res.status(200).json({
       success: true,
@@ -274,7 +296,13 @@ export const addProductsToEvent = async (req, res) => {
     await event.save();
 
     const updatedEvent = await Event.findById(id)
-      .populate("products", "name price images");
+      .populate({
+        path: "products",
+        populate: {
+          path: "defaultVariant variants",
+          model: "Variant"
+        }
+      });
 
     res.status(200).json({
       success: true,
@@ -315,7 +343,13 @@ export const removeProductsFromEvent = async (req, res) => {
     await event.save();
 
     const updatedEvent = await Event.findById(id)
-      .populate("products", "name price images");
+      .populate({
+        path: "products",
+        populate: {
+          path: "defaultVariant variants",
+          model: "Variant"
+        }
+      });
 
     res.status(200).json({
       success: true,

@@ -36,7 +36,7 @@ export const getProducts = async (req, res) => {
     order = "asc",
     page = 1,
     limit = 8,
-    excludeId,
+    excludeSlug,
     filterBy,
     filterValue,
   } = req.query;
@@ -49,8 +49,8 @@ export const getProducts = async (req, res) => {
 
     // MATCH STAGE
     const matchStage = {};
-    if (excludeId) {
-      matchStage._id = { $ne: mongoose.Types.ObjectId(excludeId) };
+    if (excludeSlug) {
+      matchStage.slug = { $ne: excludeSlug };
     }
     if (filterBy && filterValue) {
       const filters = filterBy.split(",");

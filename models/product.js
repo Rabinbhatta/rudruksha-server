@@ -23,14 +23,9 @@ const ProductSchema = mongoose.Schema({
   },
   size: [
     {
-      name: { type: String },
+      name: { type: String }, // e.g., "Small", "Medium", "Large"
       price: { type: Number },
-    }
-  ],
-  weightSizeOptions: [
-    {
-      weight: { type: String },
-      size: { type: String  },
+      size: { type: String }, // e.g., "10mm", "12mm"
     }
   ],
   isSale: {
@@ -64,12 +59,24 @@ const ProductSchema = mongoose.Schema({
     type: Boolean,
     required: true,
   },
+  isLabCertified: {
+    type: Boolean,
+    default: false,
+  },
+  isExpertVerified: {
+    type: Boolean,
+    default: false,
+  },
   slug :{
     type: String,
     unique: true,
   },
   keywords: {
     type: Array,
+  },
+  benefits: {
+    type: [String],
+    default: [],
   },
   discount:[{title: String, percentage: Number}],
   defaultVariant: { type: mongoose.Schema.Types.ObjectId, ref: 'Variant'  },
