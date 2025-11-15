@@ -10,13 +10,12 @@ export const createProduct = async (req, res) => {
       description,
       faces,
       country,
-      weight,
       stock,
       defaultVariant,
       subCategory,
       keywords, // comma-separated string
-      size, // expected JSON string or array
-      weightSizeOptions, // NEW: JSON string or array
+      size, // expected JSON string or array [{name: "Small", price: 100, size: "10mm"}]
+      benefits, // array of strings
     } = req.body;
 
     let { discount, variants } = req.body;
@@ -25,6 +24,8 @@ export const createProduct = async (req, res) => {
     const isTopSelling = req.body.isTopSelling === "true";
     const isSpecial = req.body.isSpecial === "true";
     const isExclusive = req.body.isExclusive === "true";
+    const isLabCertified = req.body.isLabCertified === "true" || req.body.isLabCertified === true;
+    const isExpertVerified = req.body.isExpertVerified === "true" || req.body.isExpertVerified === true;
 
     // ✅ Parse keywords into flat array of strings
     let parsedKeywords = [];
@@ -50,7 +51,7 @@ export const createProduct = async (req, res) => {
       }
     }
 
-    // ✅ Parse size field into array of objects [{name, price}]
+    // ✅ Parse size field into array of objects [{name: "Small", price: 100, size: "10mm"}]
     let parsedSizes = [];
     if (size) {
       try {
@@ -60,18 +61,18 @@ export const createProduct = async (req, res) => {
       }
     }
 
-    // ✅ Parse weightSizeOptions field into array of objects [{weight, size}]
-    let parsedWeightSizeOptions = [];
-    if (weightSizeOptions) {
+    // ✅ Parse benefits into array of strings
+    let parsedBenefits = [];
+    if (benefits) {
       try {
-        parsedWeightSizeOptions = typeof weightSizeOptions === "string"
-          ? JSON.parse(weightSizeOptions)
-          : weightSizeOptions;
+        if (typeof benefits === "string") {
+          parsedBenefits = JSON.parse(benefits);
+        } else if (Array.isArray(benefits)) {
+          parsedBenefits = benefits;
+        }
       } catch (err) {
-        return res.status(400).json({
-          message: "Invalid weightSizeOptions format. Expecting JSON.",
-          details: err.message,
-        });
+        // If JSON parse fails, treat as comma-separated string
+        parsedBenefits = benefits.split(",").map((b) => b.trim());
       }
     }
 
@@ -106,13 +107,14 @@ export const createProduct = async (req, res) => {
       isSpecial,
       country,
       isTopSelling,
-      weight,
       size: parsedSizes,
-      weightSizeOptions: parsedWeightSizeOptions, // NEW
       stock,
       subCategory,
       isExclusive,
+      isLabCertified,
+      isExpertVerified,
       keywords: parsedKeywords,
+      benefits: parsedBenefits,
       variants,
       defaultVariant,
       discount,
@@ -171,8 +173,8 @@ export const editProduct = async (req, res) => {
       defaultVariant,
       subCategory,
       keywords,
-      size,
-      weightSizeOptions, // NEW
+      size, // expected JSON string or array [{name: "Small", price: 100, size: "10mm"}]
+      benefits,
       discount,
       variants,
       removedImages = "[]"
@@ -182,26 +184,16 @@ export const editProduct = async (req, res) => {
     const isTopSelling = req.body.isTopSelling === "true" || req.body.isTopSelling === "True";
     const isSpecial = req.body.isSpecial === "true" || req.body.isSpecial === "True";
     const isExclusive = req.body.isExclusive === "true" || req.body.isExclusive === "True";
+    const isLabCertified = req.body.isLabCertified === "true" || req.body.isLabCertified === true || req.body.isLabCertified === "True";
+    const isExpertVerified = req.body.isExpertVerified === "true" || req.body.isExpertVerified === true || req.body.isExpertVerified === "True";
 
-    // ✅ Parse size field
+    // ✅ Parse size field into array of objects [{name: "Small", price: 100, size: "10mm"}]
     let parsedSizes = [];
     if (size) {
       try {
         parsedSizes = typeof size === "string" ? JSON.parse(size) : size;
       } catch {
         return res.status(400).json({ message: "Invalid size format. Expecting JSON." });
-      }
-    }
-
-    // ✅ Parse weightSizeOptions field
-    let parsedWeightSizeOptions = [];
-    if (weightSizeOptions) {
-      try {
-        parsedWeightSizeOptions = typeof weightSizeOptions === "string"
-          ? JSON.parse(weightSizeOptions)
-          : weightSizeOptions;
-      } catch {
-        return res.status(400).json({ message: "Invalid weightSizeOptions format. Expecting JSON." });
       }
     }
 
@@ -231,6 +223,21 @@ export const editProduct = async (req, res) => {
           message: "Invalid keywords format. Expecting JSON array of strings.",
           details: err.message,
         });
+      }
+    }
+
+    // ✅ Parse benefits into array of strings
+    let parsedBenefits;
+    if (benefits !== undefined) {
+      try {
+        if (typeof benefits === "string") {
+          parsedBenefits = JSON.parse(benefits);
+        } else if (Array.isArray(benefits)) {
+          parsedBenefits = benefits;
+        }
+      } catch (err) {
+        // If JSON parse fails, treat as comma-separated string
+        parsedBenefits = benefits.split(",").map((b) => b.trim());
       }
     }
 
@@ -313,11 +320,13 @@ export const editProduct = async (req, res) => {
         country,
         isTopSelling,
         size: parsedSizes,
-        weightSizeOptions: parsedWeightSizeOptions, // NEW
         stock,
         subCategory,
         isExclusive,
+        isLabCertified: req.body.isLabCertified !== undefined ? isLabCertified : existingProduct.isLabCertified,
+        isExpertVerified: req.body.isExpertVerified !== undefined ? isExpertVerified : existingProduct.isExpertVerified,
         keywords,
+        benefits: parsedBenefits !== undefined ? parsedBenefits : existingProduct.benefits,
         variants,
         defaultVariant,
         discount,
