@@ -258,7 +258,7 @@ export const editProduct = async (req, res) => {
           parsedRemovedImages.map(async (url) => {
             const publicId = url.match(/\/([^/]+)\.[a-z]+$/)?.[1];
             if (publicId) {
-              await cloudinary.uploader.destroy(publicId);
+              await deleteFromCloudinary(url);
             }
           })
         );
@@ -274,11 +274,12 @@ export const editProduct = async (req, res) => {
     // ✅ Upload new images if provided
     // ✅ Upload new images if provided
     let newImageUrls = [];
-    if (req.files?.img) {
+  
+    if (req.files?.imgFile) {
       try {
-        const files = Array.isArray(req.files.img)
-          ? req.files.img
-          : [req.files.img];
+        const files = Array.isArray(req.files.imgFile)
+          ? req.files.imgFile
+          : [req.files.imgFile];
 
         newImageUrls = await Promise.all(
           files.map((file) => uploadToCloudinary(file.tempFilePath))
@@ -303,6 +304,10 @@ export const editProduct = async (req, res) => {
 
     if (updatedImg.length > 4) {
       return res.status(400).json({ error: "Maximum 4 images allowed" });
+    }
+
+    if(!discount){
+      discount = null
     }
 
     // ✅ Update product in DB
