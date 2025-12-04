@@ -416,6 +416,211 @@ export const toggleProduct = async (req, res) => {
   }
 };
 
+// Product Review Controllers
+export const addProductReview = async (req, res) => {
+  try {
+    const userId = req.userId; // Get user ID from JWT token
+    const { productID } = req.params;
+    const { rating, commentTitle, comment, reviewerName } = req.body;
+
+    // Validate required fields
+    if (!rating || !commentTitle || !comment) {
+      return res.status(400).json({ message: "Rating, commentTitle, and comment are required" });
+    }
+
+    // Validate rating range
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+    }
+
+    // Find the product
+    const product = await Product.findById(productID);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Check if user already reviewed this product (only if reviewerName is not provided)
+    if (!reviewerName) {
+      const existingReview = product.reviews.find(
+        (review) => review.userID.toString() === userId
+      );
+      if (existingReview) {
+        return res.status(400).json({ message: "You have already reviewed this product" });
+      }
+    }
+
+    // Add review to product
+    const reviewData = {
+      userID: userId,
+      rating,
+      commentTitle,
+      comment,
+    };
+    
+    // Add reviewerName if provided (for admin-created reviews)
+    if (reviewerName) {
+      reviewData.reviewerName = reviewerName;
+    }
+
+    product.reviews.push(reviewData);
+
+    await product.save();
+
+    // Populate user info in the new review
+    await product.populate("reviews.userID", "fullName email");
+
+    const newReview = product.reviews[product.reviews.length - 1];
+
+    res.status(201).json({
+      message: "Review added successfully",
+      review: newReview,
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const updateProductReview = async (req, res) => {
+  try {
+    const userId = req.userId; // Get user ID from JWT token
+    const { productID, reviewID } = req.params;
+    const { rating, commentTitle, comment, reviewerName } = req.body;
+
+    // Find the product
+    const product = await Product.findById(productID);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Find the review
+    const review = product.reviews.id(reviewID);
+    if (!review) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    // Check if the user owns this review (only enforce if reviewerName is not being set, meaning it's a user update)
+    if (!reviewerName && review.userID.toString() !== userId) {
+      return res.status(403).json({ message: "You can only update your own reviews" });
+    }
+
+    // Validate rating if provided
+    if (rating !== undefined && (rating < 1 || rating > 5)) {
+      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+    }
+
+    // Update review fields
+    if (rating !== undefined) review.rating = rating;
+    if (commentTitle !== undefined) review.commentTitle = commentTitle;
+    if (comment !== undefined) review.comment = comment;
+    if (reviewerName !== undefined) review.reviewerName = reviewerName;
+    review.updatedAt = new Date();
+
+    await product.save();
+
+    // Populate user info
+    await product.populate("reviews.userID", "fullName email");
+
+    res.status(200).json({
+      message: "Review updated successfully",
+      review: product.reviews.id(reviewID),
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const deleteProductReview = async (req, res) => {
+  try {
+    const userId = req.userId; // Get user ID from JWT token
+    const { productID, reviewID } = req.params;
+
+    // Find the product
+    const product = await Product.findById(productID);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Find the review
+    const review = product.reviews.id(reviewID);
+    if (!review) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    // Check if the user owns this review
+    if (review.userID.toString() !== userId) {
+      return res.status(403).json({ message: "You can only delete your own reviews" });
+    }
+
+    // Remove the review
+    product.reviews.pull(reviewID);
+    await product.save();
+
+    res.status(200).json({
+      message: "Review deleted successfully",
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const getProductReviews = async (req, res) => {
+  try {
+    const { productID } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    // Find the product and populate reviews
+    const product = await Product.findById(productID).populate(
+      "reviews.userID",
+      "fullName email"
+    );
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Get total count
+    const totalCount = product.reviews ? product.reviews.length : 0;
+
+    // If no reviews, return empty result
+    if (totalCount === 0) {
+      return res.status(200).json({
+        reviews: [],
+        stats: {
+          averageRating: 0,
+          totalRatings: 0,
+        },
+        totalPages: 0,
+        currentPage: parseInt(page),
+        totalReviews: 0,
+      });
+    }
+
+    // Sort reviews by createdAt (newest first) and paginate
+    const sortedReviews = product.reviews
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(skip, skip + parseInt(limit));
+
+    // Calculate average rating
+    const averageRating =
+      product.reviews.reduce((sum, review) => sum + review.rating, 0) /
+      product.reviews.length;
+
+    res.status(200).json({
+      reviews: sortedReviews,
+      stats: {
+        averageRating: Math.round(averageRating * 10) / 10,
+        totalRatings: totalCount,
+      },
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: parseInt(page),
+      totalReviews: totalCount,
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 
 
 
