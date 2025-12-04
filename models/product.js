@@ -81,6 +81,15 @@ const ProductSchema = mongoose.Schema({
   discount:[{title: String, percentage: Number}],
   defaultVariant: { type: mongoose.Schema.Types.ObjectId, ref: 'Variant'  },
   variants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Variant' }],
+  reviews: [{
+    userID: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    reviewerName: { type: String }, // Optional custom name for admin-created reviews
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    commentTitle: { type: String, required: true },
+    comment: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+  }],
 });
 
 ProductSchema.pre("save", function (next) {
