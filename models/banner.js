@@ -1,18 +1,20 @@
 import mongoose from "mongoose";
 
 const bannerSchema = new mongoose.Schema({
-  banners: {
-    type: [String], // Array of banner URLs
-    validate: [arrayLimit, '{PATH} exceeds the limit of 3'],
+  name: { type: String,unique: true, required: true },
+
+  images: {
+    type: [String],   // Array of image URLs
+    validate: {
+      validator: function (val) {
+        return val.length <= 3;
+      },
+      message: "Maximum 3 banner images allowed"
+    },
     default: []
   }
 }, { timestamps: true });
 
-// Validator to ensure max 3 banners
-function arrayLimit(val) {
-  return val.length <= 3;
-}
-
 const Banner = mongoose.model("Banner", bannerSchema);
 
-export default Banner
+export default Banner;

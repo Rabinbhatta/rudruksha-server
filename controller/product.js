@@ -16,6 +16,7 @@ export const createProduct = async (req, res) => {
       keywords, // comma-separated string
       size, // expected JSON string or array [{name: "Small", price: 100, size: "10mm"}]
       benefits, // array of strings
+      youtubeLink
     } = req.body;
 
     let { discount, variants } = req.body;
@@ -118,6 +119,7 @@ export const createProduct = async (req, res) => {
       variants,
       defaultVariant,
       discount,
+      youtubeLink
     });
 
     const savedProduct = await product.save();
@@ -177,6 +179,7 @@ export const editProduct = async (req, res) => {
       benefits,
       discount,
       variants,
+      youtubeLink,
       removedImages = "[]"
     } = req.body;
 
@@ -335,6 +338,7 @@ export const editProduct = async (req, res) => {
         variants,
         defaultVariant,
         discount,
+        youtubeLink
       },
       { new: true, runValidators: true }
     );

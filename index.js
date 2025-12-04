@@ -23,6 +23,8 @@ import eventRoute from "./router/events.js";
 import uploadRoute from "./router/upload.js";
 import dashboardRoute from "./router/dashboard.js";
 import bannerRoute from "./router/banner.js"
+import faqRoute from "./router/faq.js";
+import contactRoute from "./router/contact.js";
 
 const app = express();
 const https = createServer(app);
@@ -66,6 +68,8 @@ app.use("/event", eventRoute);
 app.use("", uploadRoute);
 app.use("/dashboard", dashboardRoute);
 app.use("/banner",bannerRoute)
+app.use("/faq", faqRoute);
+app.use("/contact", contactRoute);
 
 cloudinary.config({
   cloud_name: process.env.cloudinary_cloud_name,

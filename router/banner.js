@@ -1,10 +1,23 @@
-import express from "express"
-import { addImages, getImages, removeImage } from "../controller/banner.js"
+import express from "express";
+import { 
+  addImages, 
+  getImages, 
+  removeImage,
+  getImagesByName 
+} from "../controller/banner.js";
 
-const router = express.Router()
+const router = express.Router();
 
-router.post("/create",addImages)
-router.get("/get",getImages)
-router.delete("/delete",removeImage)
+// Create or add images to a banner
+router.post("/create", addImages);
 
-export default router
+// Get images from the first banner (default)
+router.get("/get", getImages);
+
+// Get images by banner name
+router.get("/get/:name", getImagesByName);
+
+// Delete image from a banner
+router.delete("/delete", removeImage);
+
+export default router;

@@ -71,6 +71,9 @@ const ProductSchema = mongoose.Schema({
     type: String,
     unique: true,
   },
+  youtubeLink: {
+    type: String,
+  },
   keywords: {
     type: Array,
   },
