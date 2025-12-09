@@ -25,6 +25,8 @@ const orderSchema = new mongoose.Schema({
     promocode : { type: mongoose.Schema.Types.ObjectId, ref: 'PromoCode', default: null },
     paymentMethod: { type: String, required: true  },
     paymentStatus: { type: String, required: true, default: "Pending" },
+    shippingLocation: { type: String, enum: ['insideKathmandu', 'outsideKathmandu', 'india', 'otherInternational'], default: null },
+    shippingFee: { type: Number, default: 0, min: 0 },
     createdAt: { type: Date, default: Date.now },
 })
 
