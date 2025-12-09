@@ -3,13 +3,17 @@ import {
   addImages, 
   getImages, 
   removeImage,
-  getImagesByName 
+  getImagesByName,
+  updateBanner
 } from "../controller/banner.js";
 
 const router = express.Router();
 
 // Create or add images to a banner
 router.post("/create", addImages);
+
+// Update/replace all images in a banner
+router.put("/update", updateBanner);
 
 // Get images from the first banner (default)
 router.get("/get", getImages);

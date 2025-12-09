@@ -21,8 +21,8 @@ export const getContactById = async (req, res) => {
 
 export const createContact = async (req, res) => {
   try {
-    const { name, email, message } = req.body;
-    const newContact = new Contact({ name, email, message });
+    const { location, phone, email } = req.body;
+    const newContact = new Contact({ location, phone, email });
     await newContact.save();
     res.status(201).json(newContact);
     } catch (error) {
@@ -32,11 +32,11 @@ export const createContact = async (req, res) => {
 
 export const updateContact = async (req, res) => {
   try {
-    const { name, email, message } = req.body;
+    const { location, phone, email } = req.body;
     const updatedContact = await Contact.findByIdAndUpdate(
         req.params.id,
-        { name, email, message },
-        { new: true }
+        { location, phone, email },
+        { new: true, runValidators: true }
     );
     if (!updatedContact) return res.status(404).json({ message: "Contact not found" });
     res.status(200).json(updatedContact);
