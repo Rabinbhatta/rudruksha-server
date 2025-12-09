@@ -18,7 +18,8 @@ export const createOrder = async (req, res) => {
       promocode,
       paymentMethod,
       paymentStatus,
-      
+      shippingLocation,
+      shippingFee,
     } = req.body;
 
     const userId = req.userId || req.body.userId;
@@ -56,6 +57,8 @@ export const createOrder = async (req, res) => {
       promocode: promocode || null,
       paymentMethod,
       paymentStatus: paymentStatus || "Pending",
+      shippingLocation: shippingLocation || null,
+      shippingFee: shippingFee || 0,
     });
 
     await newOrder.save();
