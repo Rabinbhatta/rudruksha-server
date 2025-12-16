@@ -34,9 +34,35 @@ const FonePayQRSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+const EsewaQRSchema = new mongoose.Schema({
+  qrCodeUrl: {
+    type: String,
+    default: null,
+  },
+}, {
+  timestamps: true,
+});
+
+const KhaltiQRSchema = new mongoose.Schema({
+  qrCodeUrl: {
+    type: String,
+    default: null,
+  },
+}, {
+  timestamps: true,
+});
+
 const PersonalInfoSchema = new mongoose.Schema({
   fonepayQR: {
     type: FonePayQRSchema,
+    default: null,
+  },
+  esewaQR: {
+    type: EsewaQRSchema,
+    default: null,
+  },
+  khaltiQR: {
+    type: KhaltiQRSchema,
     default: null,
   },
   bankQRs: {
