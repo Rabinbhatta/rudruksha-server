@@ -36,7 +36,7 @@ export const getEvents = async (req, res) => {
 
         // Populate only the paginated products
         const populatedEvent = await Event.findById(event._id)
-          .select('title bannerPopUpImage bannerImage products isActive createdAt updatedAt')
+          .select('title description bannerPopUpImage bannerImage products isActive createdAt updatedAt')
           .populate({
             path: 'products',
             match: { _id: { $in: paginatedProductIds } },
@@ -103,7 +103,7 @@ export const getEventById = async (req, res) => {
 
 // Create new event
 export const createEvent = async (req, res) => {
-  const { title, products, isActive } = req.body;
+  const { title, description, products, isActive } = req.body;
   
   try {
     const events = await Event.countDocuments();
@@ -151,6 +151,7 @@ export const createEvent = async (req, res) => {
     // Create new event
     const newEvent = new Event({
       title,
+      description: description || "",
       bannerPopUpImage: bannerPopUpImageUrl,
       bannerImage: bannerImageUrls,
       products: parsedProducts || [],
@@ -185,7 +186,7 @@ export const createEvent = async (req, res) => {
 // Update event
 export const updateEvent = async (req, res) => {
   const { id } = req.params;
-  const { title, products, isActive } = req.body;
+  const { title, description, products, isActive } = req.body;
 
   try {
     const event = await Event.findById(id);
@@ -200,6 +201,9 @@ export const updateEvent = async (req, res) => {
 
     // Update title if provided
     if (title) updateData.title = title;
+
+    // Update description if provided
+    if (description !== undefined) updateData.description = description;
 
     // Update isActive if provided
     if (isActive !== undefined) updateData.isActive = isActive;

@@ -75,6 +75,122 @@ export const createOrUpdateFonePayQR = async (req, res) => {
   }
 };
 
+// Create or update eSewa QR
+export const createOrUpdateEsewaQR = async (req, res) => {
+  try {
+    if (!req.files || !req.files.esewaQR) {
+      return res.status(400).json({ error: 'eSewa QR image is required' });
+    }
+
+    const file = req.files.esewaQR;
+    let personalInfo = await PersonalInfo.getOrCreate();
+
+    // Upload to cloudinary
+    let qrCodeUrl;
+    try {
+      if (!file.tempFilePath) {
+        return res.status(400).json({ error: 'File path is missing' });
+      }
+      
+      qrCodeUrl = await uploadToCloudinary(file.tempFilePath);
+      
+      if (!qrCodeUrl || typeof qrCodeUrl !== 'string') {
+        throw new Error('Invalid upload result - expected URL string');
+      }
+    } catch (uploadError) {
+      console.error('Cloudinary upload error:', uploadError);
+      return res.status(500).json({ error: `Failed to upload QR code: ${uploadError.message}` });
+    }
+
+    // Delete old QR code from Cloudinary if exists
+    if (personalInfo.esewaQR && personalInfo.esewaQR.qrCodeUrl) {
+      try {
+        await deleteFromCloudinary(personalInfo.esewaQR.qrCodeUrl);
+      } catch (deleteError) {
+        console.error('Error deleting old eSewa QR from Cloudinary:', deleteError);
+        // Continue even if deletion fails
+      }
+    }
+
+    // Update or create esewaQR
+    if (!personalInfo.esewaQR) {
+      personalInfo.esewaQR = {
+        qrCodeUrl: qrCodeUrl,
+      };
+    } else {
+      personalInfo.esewaQR.qrCodeUrl = qrCodeUrl;
+    }
+
+    await personalInfo.save();
+
+    res.status(200).json({
+      message: 'eSewa QR updated successfully',
+      personalInfo: personalInfo,
+    });
+  } catch (error) {
+    console.error('Error updating eSewa QR:', error);
+    res.status(500).json({ error: 'Failed to update eSewa QR' });
+  }
+};
+
+// Create or update Khalti QR
+export const createOrUpdateKhaltiQR = async (req, res) => {
+  try {
+    if (!req.files || !req.files.khaltiQR) {
+      return res.status(400).json({ error: 'Khalti QR image is required' });
+    }
+
+    const file = req.files.khaltiQR;
+    let personalInfo = await PersonalInfo.getOrCreate();
+
+    // Upload to cloudinary
+    let qrCodeUrl;
+    try {
+      if (!file.tempFilePath) {
+        return res.status(400).json({ error: 'File path is missing' });
+      }
+      
+      qrCodeUrl = await uploadToCloudinary(file.tempFilePath);
+      
+      if (!qrCodeUrl || typeof qrCodeUrl !== 'string') {
+        throw new Error('Invalid upload result - expected URL string');
+      }
+    } catch (uploadError) {
+      console.error('Cloudinary upload error:', uploadError);
+      return res.status(500).json({ error: `Failed to upload QR code: ${uploadError.message}` });
+    }
+
+    // Delete old QR code from Cloudinary if exists
+    if (personalInfo.khaltiQR && personalInfo.khaltiQR.qrCodeUrl) {
+      try {
+        await deleteFromCloudinary(personalInfo.khaltiQR.qrCodeUrl);
+      } catch (deleteError) {
+        console.error('Error deleting old Khalti QR from Cloudinary:', deleteError);
+        // Continue even if deletion fails
+      }
+    }
+
+    // Update or create khaltiQR
+    if (!personalInfo.khaltiQR) {
+      personalInfo.khaltiQR = {
+        qrCodeUrl: qrCodeUrl,
+      };
+    } else {
+      personalInfo.khaltiQR.qrCodeUrl = qrCodeUrl;
+    }
+
+    await personalInfo.save();
+
+    res.status(200).json({
+      message: 'Khalti QR updated successfully',
+      personalInfo: personalInfo,
+    });
+  } catch (error) {
+    console.error('Error updating Khalti QR:', error);
+    res.status(500).json({ error: 'Failed to update Khalti QR' });
+  }
+};
+
 // Add bank QR
 export const addBankQR = async (req, res) => {
   try {
