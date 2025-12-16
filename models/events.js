@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const eventSchema = new mongoose.Schema({
     title: { type: String, required: true },
+    description: { type: String, default: "" },
     bannerPopUpImage: { type: String, required: true },
     bannerImage: [{ type: String, required: true }], 
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],

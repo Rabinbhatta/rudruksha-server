@@ -14,7 +14,9 @@ import { jwt_verify } from '../middleware/verify.js';
 
 const router = express.Router();
 
-router.post('/create', jwt_verify, createOrder);
+// Order creation should be allowed for guests as well as logged-in users,
+// so we don't require jwt_verify middleware here.
+router.post('/create', createOrder);
 router.delete('/:id', deleteOrder);
 router.get('/user',jwt_verify, getOrdersByUserId);
 router.patch('/user/cancel/:orderId', jwt_verify, deleteOrdersByUserId);
