@@ -1,5 +1,6 @@
 import Order from "../models/order.js";
 import PromoCode from "../models/promocode.js";
+import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 import mongoose from "mongoose";
 
@@ -22,10 +23,52 @@ export const createOrder = async (req, res) => {
       shippingFee,
     } = req.body;
 
-    const userId = req.userId || req.body.userId;
+    // User ID is optional: guest orders are allowed
+    const userId = req.userId || req.body.userId || null;
 
-    // Validate required fields
-    if (!userId || !fullname || !email || !phone || !products || !totalAmout || !deliveryAddress || !paymentMethod) {
+    // Handle payment verification image upload
+    let paymentVerificationImageUrl = null;
+    if (req.files && req.files.paymentVerificationImage) {
+      const paymentImage = req.files.paymentVerificationImage;
+      paymentVerificationImageUrl = await uploadToCloudinary(paymentImage.tempFilePath);
+    }
+
+    // Parse JSON-encoded fields when they come from multipart/form-data
+    let parsedProducts = products;
+    let parsedDeliveryAddress = deliveryAddress;
+
+    if (typeof parsedProducts === "string") {
+      try {
+        parsedProducts = JSON.parse(parsedProducts);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid products format",
+        });
+      }
+    }
+
+    if (typeof parsedDeliveryAddress === "string") {
+      try {
+        parsedDeliveryAddress = JSON.parse(parsedDeliveryAddress);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid deliveryAddress format",
+        });
+      }
+    }
+
+    // Validate required fields (userId is NOT required for guest checkout)
+    if (
+      !fullname ||
+      !email ||
+      !phone ||
+      !parsedProducts ||
+      !totalAmout ||
+      !parsedDeliveryAddress ||
+      !paymentMethod
+    ) {
       return res.status(400).json({ 
         success: false, 
         message: "Missing required fields" 
@@ -39,7 +82,8 @@ export const createOrder = async (req, res) => {
     }
 
 
-    if(promoCode && !promoCode.usedCount.includes(userId)){
+    // Only enforce per-user promocode restrictions when we have a userId
+    if(promoCode && userId && !promoCode.usedCount.includes(userId)){
         return res.status(400).json({ message: "Promocode not applicable for this user" });
     }
 
@@ -50,13 +94,14 @@ export const createOrder = async (req, res) => {
       fullname,
       email,
       phone,
-      products,
+      products: parsedProducts,
       totalAmout,
       orderStatus: orderStatus || "Pending",
-      deliveryAddress,
+      deliveryAddress: parsedDeliveryAddress,
       promocode: promocode || null,
       paymentMethod,
       paymentStatus: paymentStatus || "Pending",
+      paymentVerificationImage: paymentVerificationImageUrl,
       shippingLocation: shippingLocation || null,
       shippingFee: shippingFee || 0,
     });

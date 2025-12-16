@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema({
     orderId : { type: String, required: true, unique: true },
-    userId : { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // userId is optional to support guest checkout
+    userId : { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
     fullname : { type: String, required: true },
     email: { type: String, required: true },
     phone: { type: String, required: true },
@@ -25,6 +26,7 @@ const orderSchema = new mongoose.Schema({
     promocode : { type: mongoose.Schema.Types.ObjectId, ref: 'PromoCode', default: null },
     paymentMethod: { type: String, required: true  },
     paymentStatus: { type: String, required: true, default: "Pending" },
+    paymentVerificationImage: { type: String, default: null },
     shippingLocation: { type: String, enum: ['insideKathmandu', 'outsideKathmandu', 'india', 'otherInternational'], default: null },
     shippingFee: { type: Number, default: 0, min: 0 },
     createdAt: { type: Date, default: Date.now },
