@@ -5,9 +5,11 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { Cart } from "../models/cart.js";
 import Product from "../models/product.js";
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import Admin from "../models/admin.js";
+import { sendEmail } from "../utils/email.js";
+import { getOtpTemplate } from "../utils/emailTemplates.js";
+
 
 dotenv.config();
 
@@ -40,14 +42,8 @@ export const register = async (req, res) => {
     await newUser.save();
 
     // Send OTP Email
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Verify Your Email OTP",
-      text: `Your OTP code is: ${otp}`,
-    };
-
-    await transporter.sendMail(mailOptions);
+    const emailHtml = getOtpTemplate(otp, "Verification");
+    await sendEmail(email, "Verify Your Email OTP", emailHtml);
 
     res
       .status(201)
@@ -205,15 +201,7 @@ export const changePassword = async (req, res) => {
   }
 };
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    // prettier-ignore
-    user:process.env.EMAIL_USER,
-    // prettier-ignore
-    pass:process.env.EMAIL_PASS,
-  },
-});
+
 
 export const otpSend = async (req, res) => {
   try {
@@ -230,17 +218,13 @@ export const otpSend = async (req, res) => {
     user.otpExpires = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
     await user.save();
     const subject = user.isVerified ? "Password Reset OTP" : "Verify Email OTP";
+    const type = user.isVerified ? "Password Reset" : "Verification";
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: subject,
-      text: `Your OTP code is: ${otp}`,
-    };
+    const emailHtml = getOtpTemplate(otp, type);
 
     // Use async/await for sending the email
     try {
-      await transporter.sendMail(mailOptions);
+      await sendEmail(email, subject, emailHtml);
       res.json({ message: "OTP sent to email" });
     } catch (error) {
       console.error("Error sending email:", error);
@@ -309,7 +293,7 @@ export const adminLogin = async (req, res) => {
       return res.status(404).json({ error: "Wrong password!" });
     }
 
-    const token = jwt.sign({ id: admin._id }, process.env.JWT_KEY);
+    const token = jwt.sign({ id: admin._id, role: "ADMIN" }, process.env.JWT_KEY);
     return res.status(200).json({
       jwt: token,
     });
@@ -366,7 +350,7 @@ export const addToWishlist = async (req, res) => {
 
 export const removeFromWishlist = async (req, res) => {
   try {
-    const {  productId } = req.params;
+    const { productId } = req.params;
     const userId = req.userId;
     const user = await User.findById(userId);
     if (!user) {

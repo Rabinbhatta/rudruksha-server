@@ -10,7 +10,7 @@ export const getBlogs = async (req, res) => {
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
     res.status(200).json(blogs);
-    } catch (error) {   
+  } catch (error) {
     console.error("Error fetching blogs:", error);
     res
       .status(500)
@@ -20,7 +20,7 @@ export const getBlogs = async (req, res) => {
 
 export const getBlogById = async (req, res) => {
   const { id } = req.params;
-    try {
+  try {
     const blog = await Blog.findById(id);
     if (!blog) {
       return res.status(404).json({ error: "Blog not found" });
@@ -33,11 +33,12 @@ export const getBlogById = async (req, res) => {
 };
 
 export const createBlog = async (req, res) => {
-  const { title, content  } = req.body;
-  const thumbnail = req.file ? req.file.path : null;
-    try {
+  const { title, content, author } = req.body;
+  const thumbnail = req.files.image ? req.files.image : null;
+  try {
     const thumbnailUrl = await uploadToCloudinary(thumbnail.tempFilePath);
-    const newBlog = new Blog({ title, content, thumbnail: thumbnailUrl });
+    console.log("Uploaded thumbnail URL:", thumbnailUrl);
+    const newBlog = new Blog({ title, content, thumbnail: thumbnailUrl, author });
     await newBlog.save();
     res.status(201).json(newBlog);
   } catch (error) {
@@ -48,9 +49,9 @@ export const createBlog = async (req, res) => {
 
 export const updateBlog = async (req, res) => {
   const { id } = req.params;
-  const { title, content, isActive } = req.body;
-  const thumbnail = req.file ? req.file.path : null;
-    try {
+  const { title, content, isActive, author } = req.body;
+  const thumbnail = req.files ? req.files.image : null;
+  try {
     const blog = await Blog.findById(
       id
     );
@@ -60,23 +61,23 @@ export const updateBlog = async (req, res) => {
     let thumbnailUrl
     if (thumbnail) {
       thumbnailUrl = await uploadToCloudinary(thumbnail.tempFilePath);
-       await deleteFromCloudinary(blog.thumbnail);
+      await deleteFromCloudinary(blog.thumbnail);
     }
     const updatedBlog = await Blog.findByIdAndUpdate(
       id,
-      {title, content, isActive, ...(thumbnailUrl && { thumbnail: thumbnailUrl }) },
+      { title, content, author, isActive, ...(thumbnailUrl && { thumbnail: thumbnailUrl }) },
       { new: true }
     );
     res.status(200).json(updatedBlog);
-    } catch (error) {
+  } catch (error) {
     console.error("Error updating blog:", error);
     res.status(500).json({ error: "An error occurred while updating the blog." });
   }
 };
 
 export const deleteBlog = async (req, res) => {
-    const { id } = req.params;
-    try {
+  const { id } = req.params;
+  try {
     const deletedBlog = await Blog.findByIdAndDelete(id);
     if (!deletedBlog) {
       return res.status(404).json({ error: "Blog not found" });

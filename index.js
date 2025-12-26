@@ -29,7 +29,7 @@ import personalInfoRoute from "./router/personal-info.js";
 
 const app = express();
 const https = createServer(app);
-const PORT = 8000 || 8080;
+const PORT = 9000 || 8080;
 
 dotenv.config();
 app.use(express.json());

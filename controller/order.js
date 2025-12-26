@@ -1,6 +1,8 @@
 import Order from "../models/order.js";
 import PromoCode from "../models/promocode.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
+import { sendEmail } from "../utils/email.js";
+import { getOrderConfirmationTemplate, getOrderStatusUpdateTemplate, getPaymentStatusUpdateTemplate } from "../utils/emailTemplates.js";
 
 import mongoose from "mongoose";
 
@@ -69,22 +71,22 @@ export const createOrder = async (req, res) => {
       !parsedDeliveryAddress ||
       !paymentMethod
     ) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Missing required fields" 
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields"
       });
     }
 
     const promoCode = await PromoCode.findById(promocode);
 
-    if(!promoCode && promocode){
-        return res.status(400).json({ message: "Invalid promocode" });
+    if (!promoCode && promocode) {
+      return res.status(400).json({ message: "Invalid promocode" });
     }
 
 
     // Only enforce per-user promocode restrictions when we have a userId
-    if(promoCode && userId && !promoCode.usedCount.includes(userId)){
-        return res.status(400).json({ message: "Promocode not applicable for this user" });
+    if (promoCode && userId && !promoCode.usedCount.includes(userId)) {
+      return res.status(400).json({ message: "Promocode not applicable for this user" });
     }
 
     // Create new order
@@ -108,6 +110,10 @@ export const createOrder = async (req, res) => {
 
     await newOrder.save();
 
+    // Send Order Confirmation Email
+    const emailHtml = getOrderConfirmationTemplate(newOrder);
+    await sendEmail(newOrder.email, "Order Confirmation - Rudraksha", emailHtml);
+
     res.status(201).json({
       success: true,
       message: "Order created successfully",
@@ -125,12 +131,12 @@ export const createOrder = async (req, res) => {
 // Get all orders with pagination and filters
 export const getAllOrders = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      orderStatus, 
-      paymentStatus, 
-      userId 
+    const {
+      page = 1,
+      limit = 10,
+      orderStatus,
+      paymentStatus,
+      userId
     } = req.query;
 
     // Build filter object
@@ -261,7 +267,8 @@ export const editOrder = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { orderStatus } = req.body;
+    const { status } = req.body;
+    const orderStatus = status;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -282,6 +289,12 @@ export const updateOrderStatus = async (req, res) => {
       { $set: { orderStatus } },
       { new: true }
     );
+
+    if (updatedOrder) {
+      // Send Order Status Update Email
+      const emailHtml = getOrderStatusUpdateTemplate(updatedOrder);
+      await sendEmail(updatedOrder.email, `Order Status Updated: ${orderStatus}`, emailHtml);
+    }
 
     if (!updatedOrder) {
       return res.status(404).json({
@@ -308,7 +321,8 @@ export const updateOrderStatus = async (req, res) => {
 export const updatePaymentStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { paymentStatus } = req.body;
+    const { status } = req.body;
+    const paymentStatus = status;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -329,6 +343,12 @@ export const updatePaymentStatus = async (req, res) => {
       { $set: { paymentStatus } },
       { new: true }
     );
+
+    if (updatedOrder) {
+      // Send Payment Status Update Email
+      const emailHtml = getPaymentStatusUpdateTemplate(updatedOrder);
+      await sendEmail(updatedOrder.email, `Payment Status Updated: ${paymentStatus}`, emailHtml);
+    }
 
     if (!updatedOrder) {
       return res.status(404).json({
@@ -462,7 +482,7 @@ export const getOrdersByUserId = async (req, res) => {
 
 
 
-export const deleteOrdersByUserId = async (req,res) => {
+export const deleteOrdersByUserId = async (req, res) => {
   try {
     const userId = req.userId;
     const orderId = req.params.orderId;
@@ -472,13 +492,13 @@ export const deleteOrdersByUserId = async (req,res) => {
 
     const order = await Order.findOne({ userId, _id: orderId });
     if (!order) {
-      return res.status(404).json({message: "Order not found for this user"});
+      return res.status(404).json({ message: "Order not found for this user" });
     }
-    if(order.orderStatus != "Pending"){
-      return res.status(400).json({message: "Only pending orders can be cancelled"});
+    if (order.orderStatus != "Pending") {
+      return res.status(400).json({ message: "Only pending orders can be cancelled" });
     }
     order.orderStatus = "Cancelled";
-    const result =  await order.save();
+    const result = await order.save();
     res.status(200).json({
       success: true,
       message: "Orders cancelled successfully",

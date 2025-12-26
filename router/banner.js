@@ -1,19 +1,20 @@
 import express from "express";
-import { 
-  addImages, 
-  getImages, 
+import {
+  addImages,
+  getImages,
   removeImage,
   getImagesByName,
   updateBanner
 } from "../controller/banner.js";
+import { verifyAdmin } from "../middleware/admin.js";
 
 const router = express.Router();
 
 // Create or add images to a banner
-router.post("/create", addImages);
+router.post("/create", verifyAdmin, addImages);
 
 // Update/replace all images in a banner
-router.put("/update", updateBanner);
+router.put("/update", verifyAdmin, updateBanner);
 
 // Get images from the first banner (default)
 router.get("/get", getImages);
@@ -22,6 +23,6 @@ router.get("/get", getImages);
 router.get("/get/:name", getImagesByName);
 
 // Delete image from a banner
-router.delete("/delete", removeImage);
+router.delete("/delete", verifyAdmin, removeImage);
 
 export default router;
