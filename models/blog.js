@@ -12,7 +12,11 @@ const blogSchema = new mongoose.Schema(
     },
     thumbnail: {
         type: String,
-        required: true,
+        required: false,
+    },
+    author: {
+        type: String,
+        required: false,
     },
     isActive: {
         type: Boolean,
