@@ -7,13 +7,14 @@ import {
   applyPromocode
 } from '../controller/promocode.js';
 import { jwt_verify } from '../middleware/verify.js';
+import { verifyAdmin } from '../middleware/admin.js';
 
 const router = express.Router();
 
-router.post('/create', createPromocode);
-router.delete('/delete/:id', deletePromocode);
-router.patch('/update/:id', editPromocode);
-router.get('/list', listPromocodes);
+router.post('/create', verifyAdmin, createPromocode);
+router.delete('/delete/:id', verifyAdmin, deletePromocode);
+router.patch('/update/:id', verifyAdmin, editPromocode);
+router.get('/list', verifyAdmin, listPromocodes);
 router.put('/apply', jwt_verify, applyPromocode);
 
 export default router;

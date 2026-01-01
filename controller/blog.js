@@ -26,7 +26,7 @@ export const getBlogs = async (req, res) => {
 
 export const getBlogById = async (req, res) => {
   const { id } = req.params;
-    try {
+  try {
     const blog = await Blog.findById(id);
     if (!blog) {
       return res.status(404).json({ error: "Blog not found" });
@@ -170,8 +170,8 @@ export const updateBlog = async (req, res) => {
 };
 
 export const deleteBlog = async (req, res) => {
-    const { id } = req.params;
-    try {
+  const { id } = req.params;
+  try {
     const deletedBlog = await Blog.findByIdAndDelete(id);
     if (!deletedBlog) {
       return res.status(404).json({ error: "Blog not found" });

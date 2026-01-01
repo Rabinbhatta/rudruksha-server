@@ -11,14 +11,15 @@ import {
   getProductReviews
 } from "../controller/product.js";
 import { jwt_verify } from "../middleware/verify.js";
+import { verifyAdmin } from "../middleware/admin.js";
 
 const router = express.Router();
 
-router.post("/create", createProduct);
-router.delete("/delete/:id", deleteProduct);
-router.patch("/update/:id", editProduct);
+router.post("/create", verifyAdmin, createProduct);
+router.delete("/delete/:id", verifyAdmin, deleteProduct);
+router.patch("/update/:id", verifyAdmin, editProduct);
 router.get("/search", searchProduct);
-router.patch("/toggle/:id", toggleProduct);
+router.patch("/toggle/:id", verifyAdmin, toggleProduct);
 
 // Product Review Routes
 router.post("/:productID/review/create", jwt_verify, addProductReview);
