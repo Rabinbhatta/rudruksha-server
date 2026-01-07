@@ -106,6 +106,7 @@ export const login = async (req, res) => {
         email: user.email,
         id: user._id,
         cart: productDetails,
+        isVerified: user.isVerified
       },
     });
   } catch (error) {
@@ -293,7 +294,7 @@ export const adminLogin = async (req, res) => {
       return res.status(404).json({ error: "Wrong password!" });
     }
 
-    const token = jwt.sign({ id: admin._id, role: "ADMIN" }, process.env.JWT_KEY);
+    const token = jwt.sign({ id: admin._id, role: "ADMIN" }, process.env.JWT_KEY, { expiresIn: "12hr" });
     return res.status(200).json({
       jwt: token,
     });
