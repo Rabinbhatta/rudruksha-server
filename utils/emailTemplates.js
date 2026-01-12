@@ -477,6 +477,93 @@ export function getPaymentStatusUpdateTemplate(order) {
 }
 
 // ------------------------------------------------------------
+// ✅ ADMIN ORDER NOTIFICATION TEMPLATE
+// ------------------------------------------------------------
+export function getAdminOrderNotificationTemplate(order) {
+  const orderId = safeText(order?.orderId || "—");
+  const fullname = safeText(order?.fullname || "Customer");
+  const email = safeText(order?.email || "N/A");
+  const phone = safeText(order?.phone || "N/A");
+  const totalAmount = getTotalAmount(order);
+  const paymentMethod = safeText(order?.paymentMethod || "N/A");
+  const paymentStatus = safeText(order?.paymentStatus || "Pending");
+  const city = safeText(order?.deliveryAddress?.city || "");
+  const street = safeText(order?.deliveryAddress?.street || "");
+
+  const productRows = Array.isArray(order?.products)
+    ? order.products
+      .map((item) => {
+        const name = safeText(item?.name || "Product");
+        const qty = Number(item?.quantity ?? 1);
+        return `<li>${name} (x${qty})</li>`;
+      })
+      .join("")
+    : "<li>No items</li>";
+
+  return wrapper({
+    title: "New Order Received",
+    preheader: `New Order #${orderId} from ${fullname}.`,
+    body: `
+      <tr>
+        <td class="content">
+          <h2 style="margin:0 0 20px 0;color:${BRAND.primary};">New Order Received!</h2>
+          <p style="margin:0 0 20px 0;font-size:16px;color:${BRAND.text};">
+            You have received a new order on Rudraksha.
+          </p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${BRAND.border};border-radius:12px;margin-bottom:30px;overflow:hidden;">
+            <tr>
+              <td style="padding:20px;background-color:${BRAND.bg};border-bottom:1px solid ${BRAND.border};">
+                 <div style="font-weight:700;color:${BRAND.text};">Order Highlights</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.muted};">Order ID</td>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.text};text-align:right;font-weight:600;">${orderId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.muted};">Customer</td>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.text};text-align:right;">${fullname}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.muted};">Email</td>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.text};text-align:right;">${email}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.muted};">Phone</td>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.text};text-align:right;">${phone}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.muted};">Total Amount</td>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.text};text-align:right;font-weight:700;color:${BRAND.primary};">Rs. ${formatNPR(totalAmount)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.muted};">Payment</td>
+                    <td style="padding-bottom:10px;font-size:14px;color:${BRAND.text};text-align:right;">${paymentMethod} (${paymentStatus})</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:14px;color:${BRAND.muted};">Address</td>
+                    <td style="font-size:14px;color:${BRAND.text};text-align:right;">${street}${city ? `, ${city}` : ""}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <div style="font-weight:700;color:${BRAND.text};margin-bottom:10px;">Items:</div>
+          <ul style="margin:0;padding-left:20px;color:${BRAND.muted};font-size:14px;">
+            ${productRows}
+          </ul>
+        </td>
+      </tr>
+    `,
+  });
+}
+
+// ------------------------------------------------------------
 export function getOtpTemplate(otp, type) {
   const purpose = safeText(type || "your request");
   const code = safeText(otp || "");

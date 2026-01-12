@@ -6,7 +6,7 @@ import {
 import { verifyAdmin } from '../middleware/admin.js';
 
 const router = express.Router();
-router.get('/', verifyAdmin, getContacts);
+router.get('/', getContacts);
 router.get('/:id', verifyAdmin, getContactById);
 router.post('/', createContact);
 router.put('/:id', verifyAdmin, updateContact);

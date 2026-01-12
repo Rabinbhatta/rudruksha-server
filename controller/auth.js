@@ -132,13 +132,13 @@ export const deleteUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const id = req.params.id;
-    const { name, email } = req.body;
+    const { name } = req.body;
 
     // Validate input
-    if (!name || !email) {
+    if (!name) {
       return res
         .status(400)
-        .json({ message: "Username and email are required" });
+        .json({ message: "Username is required" });
     }
 
     // Find the user by ID
@@ -148,8 +148,7 @@ export const updateUser = async (req, res) => {
     }
 
     // Update user information
-    user.name = name;
-    user.email = email;
+    user.fullName = name;
 
     // Save the updated user
     await user.save();

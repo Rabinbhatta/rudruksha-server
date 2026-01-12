@@ -2,7 +2,7 @@ import Order from "../models/order.js";
 import PromoCode from "../models/promocode.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import { sendEmail } from "../utils/email.js";
-import { getOrderConfirmationTemplate, getOrderStatusUpdateTemplate, getPaymentStatusUpdateTemplate } from "../utils/emailTemplates.js";
+import { getOrderConfirmationTemplate, getOrderStatusUpdateTemplate, getPaymentStatusUpdateTemplate, getAdminOrderNotificationTemplate } from "../utils/emailTemplates.js";
 
 import mongoose from "mongoose";
 
@@ -113,6 +113,11 @@ export const createOrder = async (req, res) => {
     // Send Order Confirmation Email
     const emailHtml = getOrderConfirmationTemplate(newOrder);
     await sendEmail(newOrder.email, "Order Confirmation - Rudraksha", emailHtml);
+
+    // Send Admin Notification Email
+    const adminEmailHtml = getAdminOrderNotificationTemplate(newOrder);
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+    await sendEmail(adminEmail, `New Order Received - ${newOrder.orderId}`, adminEmailHtml);
 
     res.status(201).json({
       success: true,
