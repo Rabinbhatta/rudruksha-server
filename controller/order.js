@@ -1,5 +1,6 @@
 import Order from "../models/order.js";
 import PromoCode from "../models/promocode.js";
+import Notification from "../models/notification.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import { sendEmail } from "../utils/email.js";
 import { getOrderConfirmationTemplate, getOrderStatusUpdateTemplate, getPaymentStatusUpdateTemplate, getAdminOrderNotificationTemplate } from "../utils/emailTemplates.js";
@@ -26,7 +27,13 @@ export const createOrder = async (req, res) => {
     } = req.body;
 
     // User ID is optional: guest orders are allowed
-    const userId = req.userId || req.body.userId || null;
+    // req.userId is set by optional_jwt_verify middleware if token is present
+    let userId = req.userId || req.body.userId || null;
+    
+    // Convert userId to ObjectId if it's a valid string
+    if (userId && typeof userId === 'string' && mongoose.Types.ObjectId.isValid(userId)) {
+      userId = new mongoose.Types.ObjectId(userId);
+    }
 
     // Handle payment verification image upload
     let paymentVerificationImageUrl = null;
@@ -92,7 +99,7 @@ export const createOrder = async (req, res) => {
     // Create new order
     const newOrder = new Order({
       orderId,
-      userId,
+      userId: userId || undefined, // Use undefined instead of null to ensure it's saved correctly
       fullname,
       email,
       phone,
@@ -109,6 +116,16 @@ export const createOrder = async (req, res) => {
     });
 
     await newOrder.save();
+
+    // Create notification for admin
+    const notification = new Notification({
+      type: 'order',
+      title: 'New Order Received',
+      message: `New order ${newOrder.orderId} from ${newOrder.fullname}`,
+      relatedId: newOrder._id,
+      relatedModel: 'Order',
+    });
+    await notification.save();
 
     // Send Order Confirmation Email
     const emailHtml = getOrderConfirmationTemplate(newOrder);
@@ -162,11 +179,17 @@ export const getAllOrders = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Add orderType field to each order (user or guest)
+    const ordersWithType = orders.map(order => ({
+      ...order.toObject(),
+      orderType: order.userId ? 'user' : 'guest'
+    }));
+
     const totalOrders = await Order.countDocuments(filter);
 
     res.status(200).json({
       success: true,
-      data: orders,
+      data: ordersWithType,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(totalOrders / limit),
@@ -209,9 +232,15 @@ export const getOrderById = async (req, res) => {
       });
     }
 
+    // Add orderType field (user or guest)
+    const orderWithType = {
+      ...order.toObject(),
+      orderType: order.userId ? 'user' : 'guest'
+    };
+
     res.status(200).json({
       success: true,
-      data: order,
+      data: orderWithType,
     });
   } catch (error) {
     res.status(500).json({
@@ -417,6 +446,14 @@ export const getOrdersByUserId = async (req, res) => {
     const userId = req.userId;
     const { page = 1, limit = 10 } = req.query;
 
+    // Ensure userId exists (should be set by jwt_verify middleware)
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
         success: false,
@@ -426,14 +463,30 @@ export const getOrdersByUserId = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    // Fetch orders and populate product & variant references
-    const orders = await Order.find({ userId })
-      .populate("products.productId", "title price img size") // include size array
+    // Convert userId to ObjectId for querying (MongoDB stores it as ObjectId)
+    const userIdObjectId = mongoose.Types.ObjectId.isValid(userId) 
+      ? new mongoose.Types.ObjectId(userId) 
+      : userId;
+    
+    // Query orders - try both formats to ensure we find all orders
+    let orders = await Order.find({ userId: userIdObjectId })
+      .populate("products.productId", "title price img size")
       .populate("products.variant", "name")
       .populate("promocode", "code discount")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
+    
+    // If no orders found with ObjectId, try with string format
+    if (orders.length === 0 && typeof userId === 'string') {
+      orders = await Order.find({ userId: userId })
+        .populate("products.productId", "title price img size")
+        .populate("products.variant", "name")
+        .populate("promocode", "code discount")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+    }
 
     // Map each order to include the actual size info
     const ordersWithSizeDetails = orders.map((order) => {
@@ -464,7 +517,8 @@ export const getOrdersByUserId = async (req, res) => {
       };
     });
 
-    const totalOrders = await Order.countDocuments({ userId });
+    // Count with same query logic
+    const totalOrders = await Order.countDocuments({ userId: userIdObjectId });
 
     res.status(200).json({
       success: true,
