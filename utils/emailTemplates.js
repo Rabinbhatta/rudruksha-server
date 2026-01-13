@@ -601,4 +601,125 @@ export function getOtpTemplate(otp, type) {
   });
 }
 
+// ------------------------------------------------------------
+// ✅ CONSULTATION NOTIFICATION TEMPLATE
+// ------------------------------------------------------------
+export function getConsultationNotificationTemplate(consultation, recipient = 'admin') {
+  const fullName = safeText(consultation?.fullName || "Customer");
+  const email = safeText(consultation?.email || "N/A");
+  const phone = safeText(consultation?.phone || "N/A");
+  const message = safeText(consultation?.message || "");
+  const date = safeText(consultation?.date || "Not specified");
+
+  if (recipient === 'admin') {
+    // Admin notification email
+    return wrapper({
+      title: "New Consultation Request",
+      preheader: `New consultation request from ${fullName}.`,
+      body: `
+        <tr>
+          <td class="content">
+            <h2 style="margin:0 0 20px 0;color:${BRAND.primary};">New Consultation Request!</h2>
+            <p style="margin:0 0 20px 0;font-size:16px;color:${BRAND.text};">
+              You have received a new consultation request on Rudraksha.
+            </p>
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${BRAND.border};border-radius:12px;margin-bottom:30px;overflow:hidden;">
+              <tr>
+                <td style="padding:20px;background-color:${BRAND.bg};border-bottom:1px solid ${BRAND.border};">
+                   <div style="font-weight:700;color:${BRAND.text};">Consultation Details</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:20px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="padding-bottom:10px;font-size:14px;color:${BRAND.muted};">Name</td>
+                      <td style="padding-bottom:10px;font-size:14px;color:${BRAND.text};text-align:right;font-weight:600;">${fullName}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding-bottom:10px;font-size:14px;color:${BRAND.muted};">Email</td>
+                      <td style="padding-bottom:10px;font-size:14px;color:${BRAND.text};text-align:right;">${email}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding-bottom:10px;font-size:14px;color:${BRAND.muted};">Phone</td>
+                      <td style="padding-bottom:10px;font-size:14px;color:${BRAND.text};text-align:right;">${phone}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding-bottom:10px;font-size:14px;color:${BRAND.muted};">Preferred Date</td>
+                      <td style="padding-bottom:10px;font-size:14px;color:${BRAND.text};text-align:right;">${date}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <div style="font-weight:700;color:${BRAND.text};margin-bottom:10px;">Message:</div>
+            <div style="background-color:${BRAND.bg};border-radius:12px;padding:16px;margin-bottom:20px;">
+              <p style="margin:0;font-size:14px;color:${BRAND.text};line-height:24px;white-space:pre-wrap;">${message}</p>
+            </div>
+
+            <p style="text-align:center;font-size:14px;color:${BRAND.muted};">
+              Please log in to your admin panel to view and respond to this consultation request.
+            </p>
+          </td>
+        </tr>
+      `,
+    });
+  } else {
+    // User confirmation email
+    return wrapper({
+      title: "Consultation Request Received",
+      preheader: `We've received your consultation request. We'll get back to you soon.`,
+      body: `
+        <tr>
+          <td class="content">
+            <p style="margin:0 0 20px 0;font-size:16px;line-height:24px;color:${BRAND.text};">
+              Hello <strong>${fullName}</strong>,
+            </p>
+            <p style="margin:0 0 30px 0;font-size:15px;line-height:24px;color:${BRAND.muted};">
+              Thank you for your interest in our consultation services. We've received your request and our team will get back to you soon.
+            </p>
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${BRAND.bg};border-radius:12px;margin-bottom:30px;">
+              <tr>
+                <td style="padding:24px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="padding-bottom:12px;">
+                         <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:${BRAND.muted};margin-bottom:4px;">Your Request</div>
+                         <div style="font-size:16px;font-weight:700;color:${BRAND.text};">Consultation Request</div>
+                      </td>
+                      <td style="padding-bottom:12px;text-align:right;">
+                         <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:${BRAND.muted};margin-bottom:4px;">Preferred Date</div>
+                         <div style="font-size:15px;color:${BRAND.text};">${date}</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <div style="font-weight:700;color:${BRAND.text};margin-bottom:10px;">Your Message:</div>
+            <div style="background-color:${BRAND.bg};border-radius:12px;padding:16px;margin-bottom:20px;">
+              <p style="margin:0;font-size:14px;color:${BRAND.text};line-height:24px;white-space:pre-wrap;">${message}</p>
+            </div>
+
+            <p style="margin:0 0 30px 0;font-size:15px;line-height:24px;color:${BRAND.muted};">
+              We'll review your request and contact you at <strong>${email}</strong> or <strong>${phone}</strong> to schedule your consultation.
+            </p>
+
+            <div style="background-color:#FFFBEB;border:1px solid #FEF3C7;border-radius:12px;padding:20px;text-align:center;">
+              <p style="margin:0;font-size:14px;color:#92400E;line-height:21px;">
+                <strong>What's Next?</strong><br/>
+                Our team will review your request and get back to you within 24-48 hours. If you have any urgent questions, please feel free to contact us directly.
+              </p>
+            </div>
+          </td>
+        </tr>
+      `,
+    });
+  }
+}
+
 
