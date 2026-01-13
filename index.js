@@ -26,6 +26,7 @@ import bannerRoute from "./router/banner.js"
 import faqRoute from "./router/faq.js";
 import contactRoute from "./router/contact.js";
 import personalInfoRoute from "./router/personal-info.js";
+import notificationRoute from "./router/notification.js";
 
 const app = express();
 const https = createServer(app);
@@ -72,6 +73,7 @@ app.use("/banner",bannerRoute)
 app.use("/faq", faqRoute);
 app.use("/contact", contactRoute);
 app.use("/personal-info", personalInfoRoute);
+app.use("/notification", notificationRoute);
 
 cloudinary.config({
   cloud_name: process.env.cloudinary_cloud_name,

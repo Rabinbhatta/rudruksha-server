@@ -1,4 +1,7 @@
 import Consultation from "../models/consultation.js";
+import Notification from "../models/notification.js";
+import { sendEmail } from "../utils/email.js";
+import { getConsultationNotificationTemplate } from "../utils/emailTemplates.js";
 
 export const getConsultation = async (req, res) => {
   try {
@@ -30,6 +33,31 @@ export const createConsultation = async (req, res) => {
   });
   try {
     await newConsultation.save();
+
+    // Create notification for admin
+    const notification = new Notification({
+      type: 'consultation',
+      title: 'New Consultation Request',
+      message: `${fullName} requested a consultation`,
+      relatedId: newConsultation._id,
+      relatedModel: 'Consultaion',
+    });
+    await notification.save();
+
+    // Send email to admin (khandbarirudrakhsa@gmail.com)
+    const adminEmail = process.env.ADMIN_EMAIL || 'khandbarirudrakhsa@gmail.com';
+    const adminEmailHtml = getConsultationNotificationTemplate(newConsultation, 'admin');
+    await sendEmail(adminEmail, `New Consultation Request from ${fullName}`, adminEmailHtml);
+    
+    // Also send to khandbarirudrakhsa@gmail.com if ADMIN_EMAIL is different
+    if (process.env.ADMIN_EMAIL && process.env.ADMIN_EMAIL !== 'khandbarirudrakhsa@gmail.com') {
+      await sendEmail('khandbarirudrakhsa@gmail.com', `New Consultation Request from ${fullName}`, adminEmailHtml);
+    }
+
+    // Send confirmation email to user
+    const userEmailHtml = getConsultationNotificationTemplate(newConsultation, 'user');
+    await sendEmail(email, 'Consultation Request Received - Rudraksha', userEmailHtml);
+
     res.status(201).json(newConsultation);
   } catch (error) {
     res.status(409).json({ message: error.message });
