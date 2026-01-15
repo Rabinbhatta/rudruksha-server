@@ -52,6 +52,40 @@ const KhaltiQRSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+const IndiaQRSchema = new mongoose.Schema({
+  qrCodeUrl: {
+    type: String,
+    default: null,
+  },
+}, {
+  timestamps: true,
+});
+
+const IndiaBankQRSchema = new mongoose.Schema({
+  bankName: {
+    type: String,
+    required: true,
+  },
+  accountNumber: {
+    type: String,
+    required: true,
+  },
+  accountHolderName: {
+    type: String,
+    required: true,
+  },
+  ifscCode: {
+    type: String,
+    default: null,
+  },
+  qrCodeUrl: {
+    type: String,
+    default: null,
+  },
+}, {
+  timestamps: true,
+});
+
 const PersonalInfoSchema = new mongoose.Schema({
   fonepayQR: {
     type: FonePayQRSchema,
@@ -73,6 +107,20 @@ const PersonalInfoSchema = new mongoose.Schema({
         return v.length <= 3;
       },
       message: 'Maximum 3 bank QR codes allowed'
+    }
+  },
+  indiaQR: {
+    type: IndiaQRSchema,
+    default: null,
+  },
+  indiaBankQRs: {
+    type: [IndiaBankQRSchema],
+    default: [],
+    validate: {
+      validator: function(v) {
+        return v.length <= 3;
+      },
+      message: 'Maximum 3 India bank QR codes allowed'
     }
   },
   shippingFees: {

@@ -354,6 +354,240 @@ export const deleteBankQR = async (req, res) => {
   }
 };
 
+// Create or update India QR
+export const createOrUpdateIndiaQR = async (req, res) => {
+  try {
+    if (!req.files || !req.files.indiaQR) {
+      return res.status(400).json({ error: 'India QR image is required' });
+    }
+
+    const file = req.files.indiaQR;
+    let personalInfo = await PersonalInfo.getOrCreate();
+
+    // Upload to cloudinary
+    let qrCodeUrl;
+    try {
+      if (!file.tempFilePath) {
+        return res.status(400).json({ error: 'File path is missing' });
+      }
+      
+      qrCodeUrl = await uploadToCloudinary(file.tempFilePath);
+      
+      if (!qrCodeUrl || typeof qrCodeUrl !== 'string') {
+        throw new Error('Invalid upload result - expected URL string');
+      }
+    } catch (uploadError) {
+      console.error('Cloudinary upload error:', uploadError);
+      return res.status(500).json({ error: `Failed to upload QR code: ${uploadError.message}` });
+    }
+
+    // Delete old QR code from Cloudinary if exists
+    if (personalInfo.indiaQR && personalInfo.indiaQR.qrCodeUrl) {
+      try {
+        await deleteFromCloudinary(personalInfo.indiaQR.qrCodeUrl);
+      } catch (deleteError) {
+        console.error('Error deleting old India QR from Cloudinary:', deleteError);
+        // Continue even if deletion fails
+      }
+    }
+
+    // Update or create indiaQR
+    if (!personalInfo.indiaQR) {
+      personalInfo.indiaQR = {
+        qrCodeUrl: qrCodeUrl,
+      };
+    } else {
+      personalInfo.indiaQR.qrCodeUrl = qrCodeUrl;
+    }
+
+    await personalInfo.save();
+
+    res.status(200).json({
+      message: 'India QR updated successfully',
+      personalInfo: personalInfo,
+    });
+  } catch (error) {
+    console.error('Error updating India QR:', error);
+    res.status(500).json({ error: 'Failed to update India QR' });
+  }
+};
+
+// Add India bank QR
+export const addIndiaBankQR = async (req, res) => {
+  try {
+    const { bankName, accountNumber, accountHolderName, ifscCode } = req.body;
+
+    if (!bankName || !accountNumber || !accountHolderName) {
+      return res.status(400).json({ error: 'Bank name, account number, and account holder name are required' });
+    }
+
+    let personalInfo = await PersonalInfo.getOrCreate();
+
+    // Check maximum limit
+    if (personalInfo.indiaBankQRs && personalInfo.indiaBankQRs.length >= 3) {
+      return res.status(400).json({ error: 'Maximum 3 India bank QR codes allowed' });
+    }
+
+    let qrCodeUrl = null;
+    if (req.files && req.files.qrCode) {
+      const file = req.files.qrCode;
+      try {
+        if (!file.tempFilePath) {
+          return res.status(400).json({ error: 'File path is missing' });
+        }
+        
+        qrCodeUrl = await uploadToCloudinary(file.tempFilePath);
+        
+        if (!qrCodeUrl || typeof qrCodeUrl !== 'string') {
+          throw new Error('Invalid upload result - expected URL string');
+        }
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        return res.status(500).json({ error: `Failed to upload QR code: ${uploadError.message}` });
+      }
+    }
+
+    const newIndiaBankQR = {
+      bankName,
+      accountNumber,
+      accountHolderName,
+      ifscCode: ifscCode || null,
+      qrCodeUrl,
+    };
+
+    if (!personalInfo.indiaBankQRs) {
+      personalInfo.indiaBankQRs = [];
+    }
+    personalInfo.indiaBankQRs.push(newIndiaBankQR);
+    await personalInfo.save();
+
+    const addedIndiaBankQR = personalInfo.indiaBankQRs[personalInfo.indiaBankQRs.length - 1];
+
+    res.status(201).json({
+      message: 'India bank QR added successfully',
+      indiaBankQR: addedIndiaBankQR,
+    });
+  } catch (error) {
+    console.error('Error adding India bank QR:', error);
+    res.status(500).json({ error: 'Failed to add India bank QR' });
+  }
+};
+
+// Update India bank QR
+export const updateIndiaBankQR = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { bankName, accountNumber, accountHolderName, ifscCode } = req.body;
+
+    let personalInfo = await PersonalInfo.getOrCreate();
+    
+    if (!personalInfo.indiaBankQRs) {
+      return res.status(404).json({ error: 'India bank QR not found' });
+    }
+    
+    const indiaBankQRIndex = personalInfo.indiaBankQRs.findIndex(
+      (qr) => qr._id.toString() === id
+    );
+
+    if (indiaBankQRIndex === -1) {
+      return res.status(404).json({ error: 'India bank QR not found' });
+    }
+
+    const indiaBankQR = personalInfo.indiaBankQRs[indiaBankQRIndex];
+
+    // Update fields if provided
+    if (bankName) indiaBankQR.bankName = bankName;
+    if (accountNumber) indiaBankQR.accountNumber = accountNumber;
+    if (accountHolderName) indiaBankQR.accountHolderName = accountHolderName;
+    if (ifscCode !== undefined) indiaBankQR.ifscCode = ifscCode || null;
+
+    // Handle QR code image update
+    if (req.files && req.files.qrCode) {
+      const file = req.files.qrCode;
+      
+      // Delete old QR code from Cloudinary if exists
+      if (indiaBankQR.qrCodeUrl) {
+        try {
+          await deleteFromCloudinary(indiaBankQR.qrCodeUrl);
+        } catch (deleteError) {
+          console.error('Error deleting old India bank QR from Cloudinary:', deleteError);
+          // Continue even if deletion fails
+        }
+      }
+
+      try {
+        if (!file.tempFilePath) {
+          return res.status(400).json({ error: 'File path is missing' });
+        }
+        
+        const newQrCodeUrl = await uploadToCloudinary(file.tempFilePath);
+        
+        if (!newQrCodeUrl || typeof newQrCodeUrl !== 'string') {
+          throw new Error('Invalid upload result - expected URL string');
+        }
+        
+        indiaBankQR.qrCodeUrl = newQrCodeUrl;
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        return res.status(500).json({ error: `Failed to upload QR code: ${uploadError.message}` });
+      }
+    }
+
+    await personalInfo.save();
+
+    res.status(200).json({
+      message: 'India bank QR updated successfully',
+      indiaBankQR: indiaBankQR,
+    });
+  } catch (error) {
+    console.error('Error updating India bank QR:', error);
+    res.status(500).json({ error: 'Failed to update India bank QR' });
+  }
+};
+
+// Delete India bank QR
+export const deleteIndiaBankQR = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    let personalInfo = await PersonalInfo.getOrCreate();
+    
+    if (!personalInfo.indiaBankQRs) {
+      return res.status(404).json({ error: 'India bank QR not found' });
+    }
+    
+    const indiaBankQRIndex = personalInfo.indiaBankQRs.findIndex(
+      (qr) => qr._id.toString() === id
+    );
+
+    if (indiaBankQRIndex === -1) {
+      return res.status(404).json({ error: 'India bank QR not found' });
+    }
+
+    const indiaBankQR = personalInfo.indiaBankQRs[indiaBankQRIndex];
+
+    // Delete QR code from Cloudinary if exists
+    if (indiaBankQR.qrCodeUrl) {
+      try {
+        await deleteFromCloudinary(indiaBankQR.qrCodeUrl);
+      } catch (deleteError) {
+        console.error('Error deleting India bank QR from Cloudinary:', deleteError);
+        // Continue even if deletion fails
+      }
+    }
+
+    personalInfo.indiaBankQRs.splice(indiaBankQRIndex, 1);
+    await personalInfo.save();
+
+    res.status(200).json({
+      message: 'India bank QR deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting India bank QR:', error);
+    res.status(500).json({ error: 'Failed to delete India bank QR' });
+  }
+};
+
 // Update shipping fees
 export const updateShippingFees = async (req, res) => {
   try {
