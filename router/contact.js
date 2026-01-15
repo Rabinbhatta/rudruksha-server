@@ -14,7 +14,7 @@ router.get('/submissions/:id', verifyAdmin, getContactSubmissionById); // Get si
 router.put('/submissions/:id/read', verifyAdmin, markContactSubmissionAsRead); // Mark as read (admin)
 router.delete('/submissions/:id', verifyAdmin, deleteContactSubmission); // Delete submission (admin)
 router.get('/:id', verifyAdmin, getContactById);
-router.post('/', createContact);
+router.post('/', verifyAdmin, createContact);
 router.put('/:id', verifyAdmin, updateContact);
 router.delete('/:id', verifyAdmin, deleteContact);
 
