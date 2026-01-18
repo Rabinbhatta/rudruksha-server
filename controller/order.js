@@ -12,9 +12,9 @@ export const createOrder = async (req, res) => {
   try {
     const {
       orderId,
-      fullname,
-      email,
-      phone,
+      fullname, // Legacy field - will use deliveryAddress.fullname if available
+      email, // Legacy field - will use deliveryAddress.email if available
+      phone, // Legacy field - will use deliveryAddress.phone if available
       products,
       totalAmout,
       orderStatus,
@@ -22,8 +22,12 @@ export const createOrder = async (req, res) => {
       promocode,
       paymentMethod,
       paymentStatus,
+      transactionId,
       shippingLocation,
       shippingFee,
+      subtotal,
+      discountAmount,
+      subtotalAfterDiscount,
     } = req.body;
 
     // User ID is optional: guest orders are allowed
@@ -45,6 +49,8 @@ export const createOrder = async (req, res) => {
     // Parse JSON-encoded fields when they come from multipart/form-data
     let parsedProducts = products;
     let parsedDeliveryAddress = deliveryAddress;
+    let parsedShippingLocation = shippingLocation;
+    let parsedShippingFee = shippingFee;
 
     if (typeof parsedProducts === "string") {
       try {
@@ -68,11 +74,57 @@ export const createOrder = async (req, res) => {
       }
     }
 
+    // Parse shippingFee if it's a string
+    if (typeof parsedShippingFee === "string") {
+      parsedShippingFee = parseFloat(parsedShippingFee) || 0;
+    }
+
+    // Parse additional amount fields if they're strings
+    // All amounts are stored in cents (multiplied by 100) for consistency
+    let parsedSubtotal = subtotal;
+    let parsedDiscountAmount = discountAmount;
+    let parsedSubtotalAfterDiscount = subtotalAfterDiscount;
+
+    if (typeof parsedSubtotal === "string") {
+      parsedSubtotal = parseFloat(parsedSubtotal) || null;
+    }
+    if (typeof parsedDiscountAmount === "string") {
+      parsedDiscountAmount = parseFloat(parsedDiscountAmount) || null;
+    }
+    if (typeof parsedSubtotalAfterDiscount === "string") {
+      parsedSubtotalAfterDiscount = parseFloat(parsedSubtotalAfterDiscount) || null;
+    }
+    
+    // Ensure all amounts are in cents (if they come as decimals, multiply by 100)
+    // This handles backward compatibility with old orders that might have been stored differently
+    if (parsedSubtotal != null && parsedSubtotal < 10000) {
+      // If subtotal is less than 10000, it's likely in dollars, convert to cents
+      parsedSubtotal = Math.round(parsedSubtotal * 100);
+    }
+    if (parsedDiscountAmount != null && parsedDiscountAmount < 10000) {
+      parsedDiscountAmount = Math.round(parsedDiscountAmount * 100);
+    }
+    if (parsedSubtotalAfterDiscount != null && parsedSubtotalAfterDiscount < 10000) {
+      parsedSubtotalAfterDiscount = Math.round(parsedSubtotalAfterDiscount * 100);
+    }
+    if (parsedShippingFee != null && parsedShippingFee < 10000) {
+      parsedShippingFee = Math.round(parsedShippingFee * 100);
+    }
+
+    // Use deliveryAddress fields if available, otherwise fall back to legacy fields
+    const orderFullname = parsedDeliveryAddress?.fullname || fullname
+    const orderEmail = parsedDeliveryAddress?.email || email
+    const orderPhone = parsedDeliveryAddress?.phone || phone
+
     // Validate required fields (userId is NOT required for guest checkout)
+    // Email is optional for Nepal orders
+    const isNepalOrder = parsedShippingLocation === 'insideKathmandu' || parsedShippingLocation === 'outsideKathmandu' ||
+                         (parsedDeliveryAddress?.country && parsedDeliveryAddress.country.toLowerCase() === 'nepal')
+    
     if (
-      !fullname ||
-      !email ||
-      !phone ||
+      !orderFullname ||
+      (!isNepalOrder && !orderEmail) ||
+      !orderPhone ||
       !parsedProducts ||
       !totalAmout ||
       !parsedDeliveryAddress ||
@@ -82,6 +134,31 @@ export const createOrder = async (req, res) => {
         success: false,
         message: "Missing required fields"
       });
+    }
+
+    // Validate location-specific required fields
+    if (isNepalOrder) {
+      if (!parsedDeliveryAddress.district || !parsedDeliveryAddress.municipality || !parsedDeliveryAddress.streetToleLandmark) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required Nepal address fields: district, municipality, and street/tole/landmark are required"
+        });
+      }
+    } else if (parsedShippingLocation === 'india' || (parsedDeliveryAddress?.country && parsedDeliveryAddress.country.toLowerCase() === 'india')) {
+      if (!parsedDeliveryAddress.state || !parsedDeliveryAddress.addressLine1) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required India address fields: state and addressLine1 are required"
+        });
+      }
+    } else {
+      // Other countries
+      if (!parsedDeliveryAddress.addressLine1Other || !parsedDeliveryAddress.postalZipCode) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required address fields: addressLine1Other and postalZipCode are required"
+        });
+      }
     }
 
     const promoCode = await PromoCode.findById(promocode);
@@ -96,23 +173,80 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "Promocode not applicable for this user" });
     }
 
+    // Determine order location type and shipping location based on country and district
+    const country = parsedDeliveryAddress?.country?.toLowerCase() || '';
+    let orderLocationType = 'other';
+    let finalShippingLocation = parsedShippingLocation;
+    
+    // Auto-determine shipping location if not provided
+    if (!finalShippingLocation && country) {
+      if (country === 'nepal' || country.includes('nepal')) {
+        // For Nepal: check district to determine inside/outside Kathmandu
+        const district = parsedDeliveryAddress?.district?.toLowerCase() || '';
+        if (district === 'kathmandu') {
+          finalShippingLocation = 'insideKathmandu';
+        } else {
+          finalShippingLocation = 'outsideKathmandu';
+        }
+        orderLocationType = 'nepal';
+      } else if (country === 'india' || country.includes('india')) {
+        finalShippingLocation = 'india';
+        orderLocationType = 'india';
+      } else {
+        finalShippingLocation = 'otherInternational';
+        orderLocationType = 'other';
+      }
+    } else if (finalShippingLocation) {
+      // If shipping location is provided, determine order location type from it
+      if (finalShippingLocation === 'insideKathmandu' || finalShippingLocation === 'outsideKathmandu') {
+        orderLocationType = 'nepal';
+      } else if (finalShippingLocation === 'india') {
+        orderLocationType = 'india';
+      } else if (finalShippingLocation === 'otherInternational') {
+        orderLocationType = 'other';
+      }
+    } else if (country === 'nepal' || country.includes('nepal')) {
+      // Fallback: if country is Nepal but no shipping location, default to outsideKathmandu
+      finalShippingLocation = 'outsideKathmandu';
+      orderLocationType = 'nepal';
+    } else if (country === 'india' || country.includes('india')) {
+      finalShippingLocation = 'india';
+      orderLocationType = 'india';
+    }
+
+    // Ensure deliveryAddress has fullname, email, phone (use from deliveryAddress or fallback to legacy fields)
+    if (!parsedDeliveryAddress.fullname) {
+      parsedDeliveryAddress.fullname = orderFullname
+    }
+    if (!parsedDeliveryAddress.email && orderEmail) {
+      parsedDeliveryAddress.email = orderEmail
+    }
+    if (!parsedDeliveryAddress.phone) {
+      parsedDeliveryAddress.phone = orderPhone
+    }
+
     // Create new order
     const newOrder = new Order({
       orderId,
       userId: userId || undefined, // Use undefined instead of null to ensure it's saved correctly
-      fullname,
-      email,
-      phone,
+      fullname: orderFullname, // Keep for backward compatibility
+      email: orderEmail || null, // Keep for backward compatibility
+      phone: orderPhone, // Keep for backward compatibility
       products: parsedProducts,
       totalAmout,
+      subtotal: parsedSubtotal,
+      discountAmount: parsedDiscountAmount,
+      subtotalAfterDiscount: parsedSubtotalAfterDiscount,
       orderStatus: orderStatus || "Pending",
       deliveryAddress: parsedDeliveryAddress,
       promocode: promocode || null,
       paymentMethod,
       paymentStatus: paymentStatus || "Pending",
+      transactionId: transactionId || null,
       paymentVerificationImage: paymentVerificationImageUrl,
-      shippingLocation: shippingLocation || null,
-      shippingFee: shippingFee || 0,
+      shippingLocation: finalShippingLocation || null,
+      shippingFee: parsedShippingFee || 0,
+      orderLocationType: orderLocationType, // Add location type for easier filtering
     });
 
     await newOrder.save();

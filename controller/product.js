@@ -19,7 +19,8 @@ export const createProduct = async (req, res) => {
       youtubeLink
     } = req.body;
 
-    let { discount, variants } = req.body;
+    let { discount, variants, allowedPromoCodes } = req.body;
+    const promoEnabled = req.body.promoEnabled === "true" || req.body.promoEnabled === true;
 
     const isSale = req.body.isSale === "true";
     const isTopSelling = req.body.isTopSelling === "true";
@@ -84,6 +85,10 @@ export const createProduct = async (req, res) => {
     if (variants && typeof variants === "string") {
       variants = JSON.parse(variants);
     }
+    // ✅ Parse allowedPromoCodes if it's a string
+    if (allowedPromoCodes && typeof allowedPromoCodes === "string") {
+      allowedPromoCodes = JSON.parse(allowedPromoCodes);
+    }
 
     // ✅ Check uploaded files
     if (!req.files || !req.files.img) {
@@ -100,7 +105,6 @@ export const createProduct = async (req, res) => {
       title,
       price,
       category,
-      img: imageUrls,
       img: imageUrls,
       description,
       isSale,
@@ -119,7 +123,9 @@ export const createProduct = async (req, res) => {
       variants,
       defaultVariant,
       discount,
-      youtubeLink
+      youtubeLink,
+      promoEnabled,
+      allowedPromoCodes: allowedPromoCodes || []
     });
 
     const savedProduct = await product.save();
@@ -180,10 +186,12 @@ export const editProduct = async (req, res) => {
       discount,
       variants,
       youtubeLink,
-      removedImages = "[]"
+      removedImages = "[]",
+      allowedPromoCodes
     } = req.body;
 
     const isSale = req.body.isSale === "true" || req.body.isSale === "True";
+    const promoEnabled = req.body.promoEnabled === "true" || req.body.promoEnabled === true || req.body.promoEnabled === "True";
     const isTopSelling = req.body.isTopSelling === "true" || req.body.isTopSelling === "True";
     const isSpecial = req.body.isSpecial === "true" || req.body.isSpecial === "True";
     const isExclusive = req.body.isExclusive === "true" || req.body.isExclusive === "True";
@@ -206,6 +214,10 @@ export const editProduct = async (req, res) => {
     }
     if (variants && typeof variants === "string") {
       variants = JSON.parse(variants);
+    }
+    // ✅ Parse allowedPromoCodes if sent as string
+    if (allowedPromoCodes && typeof allowedPromoCodes === "string") {
+      allowedPromoCodes = JSON.parse(allowedPromoCodes);
     }
 
     // ✅ Parse keywords safely (handles multiple formats)
@@ -338,7 +350,9 @@ export const editProduct = async (req, res) => {
         variants,
         defaultVariant,
         discount,
-        youtubeLink
+        youtubeLink,
+        promoEnabled: req.body.promoEnabled !== undefined ? promoEnabled : existingProduct.promoEnabled,
+        allowedPromoCodes: allowedPromoCodes !== undefined ? allowedPromoCodes : existingProduct.allowedPromoCodes
       },
       { new: true, runValidators: true }
     );

@@ -1,5 +1,6 @@
 import Order from "../models/order.js";
 import PromoCode from "../models/promocode.js";
+import Product from "../models/product.js";
 
 export const createPromocode = async (req, res) => {
   try {
@@ -71,7 +72,7 @@ export const listPromocodes = async (req, res) => {
 
 export const applyPromocode = async (req, res) => {
     try {
-        const { code } = req.body;
+        const { code, productIds } = req.body;
         const userId = req.userId || req.body.userId;
         const promo = await PromoCode.findOne({ code, isActive: true });
         if (!promo) {
@@ -79,13 +80,46 @@ export const applyPromocode = async (req, res) => {
         }
         // Check usage limit
         if (promo.usageLimit !== null && promo.usedCount.length >= promo.usageLimit) {
-            return res.status(400).json({ message: "Promocode usage limit reached" });
+            return res.status(400).json({ message: "No uses left for this promocode", code: "NO_USES_LEFT" });
         }
         // Check if user has already used the promocode
         const order = await Order.findOne({ userId: userId, promocode: promo._id });
         if (promo.usedCount.includes(userId) && order) {
-            return res.status(400).json({ message: "You have already used this promocode" });
+            return res.status(400).json({ message: "You have already used this promocode", code: "ALREADY_USED" });
         }
+        
+        // Check if promo is applicable to the products
+        if (productIds && productIds.length > 0) {
+            const products = await Product.find({ _id: { $in: productIds } });
+            const nonApplicableProducts = [];
+            
+            for (const product of products) {
+                // Check if product has promo enabled
+                if (!product.promoEnabled) {
+                    nonApplicableProducts.push(product.title);
+                    continue;
+                }
+                // Check if product has this promo in allowed list
+                if (product.allowedPromoCodes && product.allowedPromoCodes.length > 0) {
+                    const promoIdStr = promo._id.toString();
+                    const isAllowed = product.allowedPromoCodes.some(
+                        allowedId => allowedId.toString() === promoIdStr
+                    );
+                    if (!isAllowed) {
+                        nonApplicableProducts.push(product.title);
+                    }
+                }
+            }
+            
+            if (nonApplicableProducts.length > 0) {
+                return res.status(400).json({ 
+                    message: `Promocode is not applicable to: ${nonApplicableProducts.join(", ")}`,
+                    code: "NOT_APPLICABLE",
+                    nonApplicableProducts
+                });
+            }
+        }
+        
         if(promo.usedCount.includes(userId)) {
             return res.status(200).json({ message: "Promocode applied successfully", promo });
         }
