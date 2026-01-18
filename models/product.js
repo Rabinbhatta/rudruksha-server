@@ -82,6 +82,14 @@ const ProductSchema = mongoose.Schema({
     default: [],
   },
   discount:[{title: String, percentage: Number}],
+  promoEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  allowedPromoCodes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PromoCode'
+  }],
   defaultVariant: { type: mongoose.Schema.Types.ObjectId, ref: 'Variant'  },
   variants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Variant' }],
   reviews: [{
