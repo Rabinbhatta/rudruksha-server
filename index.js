@@ -67,7 +67,7 @@ app.use("/blog", blogRoute);
 app.use("/promocode", promocodeRoute);
 app.use("/order", orderRoute);
 app.use("/event", eventRoute);
-app.use("", uploadRoute);
+app.use("/upload", uploadRoute);
 app.use("/dashboard", dashboardRoute);
 app.use("/banner",bannerRoute)
 app.use("/faq", faqRoute);
