@@ -60,6 +60,7 @@ const orderSchema = new mongoose.Schema({
     shippingLocation: { type: String, enum: ['insideKathmandu', 'outsideKathmandu', 'india', 'otherInternational'], default: null },
     shippingFee: { type: Number, default: 0, min: 0 },
     orderLocationType: { type: String, enum: ['nepal', 'india', 'other'], default: 'other' },
+    estimatedDeliveryDays: { type: String, default: null },
     createdAt: { type: Date, default: Date.now },
 })
 

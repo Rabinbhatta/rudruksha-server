@@ -10,6 +10,24 @@ export const getPersonalInfo = async (req, res) => {
       return res.status(404).json({ message: 'Personal info not found' });
     }
 
+    // Ensure defaults for optional nested objects so clients always receive consistent shape
+    if (!personalInfo.shippingFees) {
+      personalInfo.shippingFees = {
+        insideKathmandu: 0,
+        outsideKathmandu: 0,
+        india: 0,
+        otherInternational: 0,
+      };
+    }
+    if (!personalInfo.shippingEstimates) {
+      personalInfo.shippingEstimates = {
+        insideKathmandu: "",
+        outsideKathmandu: "",
+        india: "",
+        otherInternational: "",
+      };
+    }
+
     res.status(200).json(personalInfo);
   } catch (error) {
     console.error('Error fetching personal info:', error);
@@ -591,7 +609,13 @@ export const deleteIndiaBankQR = async (req, res) => {
 // Update shipping fees
 export const updateShippingFees = async (req, res) => {
   try {
-    const { insideKathmandu, outsideKathmandu, india, otherInternational } = req.body;
+    const {
+      insideKathmandu,
+      outsideKathmandu,
+      india,
+      otherInternational,
+      estimatedDeliveryDays = {},
+    } = req.body;
 
     // Validate that all values are numbers and non-negative
     const fees = {
@@ -599,6 +623,12 @@ export const updateShippingFees = async (req, res) => {
       outsideKathmandu: outsideKathmandu !== undefined ? Number(outsideKathmandu) : undefined,
       india: india !== undefined ? Number(india) : undefined,
       otherInternational: otherInternational !== undefined ? Number(otherInternational) : undefined,
+    };
+    const estimates = {
+      insideKathmandu: typeof estimatedDeliveryDays.insideKathmandu === 'string' ? estimatedDeliveryDays.insideKathmandu.trim() : undefined,
+      outsideKathmandu: typeof estimatedDeliveryDays.outsideKathmandu === 'string' ? estimatedDeliveryDays.outsideKathmandu.trim() : undefined,
+      india: typeof estimatedDeliveryDays.india === 'string' ? estimatedDeliveryDays.india.trim() : undefined,
+      otherInternational: typeof estimatedDeliveryDays.otherInternational === 'string' ? estimatedDeliveryDays.otherInternational.trim() : undefined,
     };
 
     // Check for invalid values
@@ -620,6 +650,16 @@ export const updateShippingFees = async (req, res) => {
       };
     }
 
+    // Initialize shippingEstimates if it doesn't exist
+    if (!personalInfo.shippingEstimates) {
+      personalInfo.shippingEstimates = {
+        insideKathmandu: "",
+        outsideKathmandu: "",
+        india: "",
+        otherInternational: "",
+      };
+    }
+
     // Update only provided fields
     if (fees.insideKathmandu !== undefined) {
       personalInfo.shippingFees.insideKathmandu = fees.insideKathmandu;
@@ -634,11 +674,26 @@ export const updateShippingFees = async (req, res) => {
       personalInfo.shippingFees.otherInternational = fees.otherInternational;
     }
 
+    // Update delivery estimates
+    if (estimates.insideKathmandu !== undefined) {
+      personalInfo.shippingEstimates.insideKathmandu = estimates.insideKathmandu;
+    }
+    if (estimates.outsideKathmandu !== undefined) {
+      personalInfo.shippingEstimates.outsideKathmandu = estimates.outsideKathmandu;
+    }
+    if (estimates.india !== undefined) {
+      personalInfo.shippingEstimates.india = estimates.india;
+    }
+    if (estimates.otherInternational !== undefined) {
+      personalInfo.shippingEstimates.otherInternational = estimates.otherInternational;
+    }
+
     await personalInfo.save();
 
     res.status(200).json({
       message: 'Shipping fees updated successfully',
       shippingFees: personalInfo.shippingFees,
+      shippingEstimates: personalInfo.shippingEstimates,
     });
   } catch (error) {
     console.error('Error updating shipping fees:', error);

@@ -1,6 +1,7 @@
 import Order from "../models/order.js";
 import PromoCode from "../models/promocode.js";
 import Notification from "../models/notification.js";
+import PersonalInfo from "../models/personal-info.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import { sendEmail } from "../utils/email.js";
 import { getOrderConfirmationTemplate, getOrderStatusUpdateTemplate, getPaymentStatusUpdateTemplate, getAdminOrderNotificationTemplate } from "../utils/emailTemplates.js";
@@ -214,6 +215,29 @@ export const createOrder = async (req, res) => {
       orderLocationType = 'india';
     }
 
+    // Pull shipping estimate text from personal info based on location
+    let estimatedDeliveryDays = null;
+    try {
+      const personalInfo = await PersonalInfo.getOrCreate();
+      const estimates = personalInfo?.shippingEstimates || {};
+      if (finalShippingLocation && typeof estimates[finalShippingLocation] === 'string') {
+        estimatedDeliveryDays = estimates[finalShippingLocation];
+      }
+    } catch (err) {
+      console.error('Error fetching shipping estimates', err);
+    }
+
+    // Provide a sensible fallback if no estimate was configured
+    if (!estimatedDeliveryDays && finalShippingLocation) {
+      const fallbackEstimates = {
+        insideKathmandu: '3-5 days',
+        outsideKathmandu: '5-7 days',
+        india: '7-10 days',
+        otherInternational: '10-15 days',
+      };
+      estimatedDeliveryDays = fallbackEstimates[finalShippingLocation] || null;
+    }
+
     // Ensure deliveryAddress has fullname, email, phone (use from deliveryAddress or fallback to legacy fields)
     if (!parsedDeliveryAddress.fullname) {
       parsedDeliveryAddress.fullname = orderFullname
@@ -247,6 +271,7 @@ export const createOrder = async (req, res) => {
       shippingLocation: finalShippingLocation || null,
       shippingFee: parsedShippingFee || 0,
       orderLocationType: orderLocationType, // Add location type for easier filtering
+      estimatedDeliveryDays: estimatedDeliveryDays || null,
     });
 
     await newOrder.save();

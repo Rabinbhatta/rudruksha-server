@@ -145,6 +145,28 @@ const PersonalInfoSchema = new mongoose.Schema({
       min: 0,
     },
   },
+  shippingEstimates: {
+    insideKathmandu: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    outsideKathmandu: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    india: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    otherInternational: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+  },
 }, {
   timestamps: true,
 });

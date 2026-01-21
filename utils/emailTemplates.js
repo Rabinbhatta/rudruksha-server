@@ -150,7 +150,9 @@ export function getOrderConfirmationTemplate(order) {
   const shippingFee = getShippingFee(order);
   const subtotal = Math.max(totalAmount - shippingFee, 0);
 
-  const estimatedDelivery = calcEstimatedDelivery(order);
+  const estimatedDeliveryText = (order?.estimatedDeliveryDays || "").toString().trim();
+  const estimatedDeliveryDate = calcEstimatedDelivery(order);
+  const estimatedDeliveryDisplay = estimatedDeliveryText || estimatedDeliveryDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const orderDate = order?.createdAt ? new Date(order.createdAt) : new Date();
 
   const productRows =
@@ -201,7 +203,7 @@ export function getOrderConfirmationTemplate(order) {
 
   return wrapper({
     title: "Order Confirmed",
-    preheader: `We've received your order ${orderId}. Estimated delivery: ${estimatedDelivery.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.`,
+    preheader: `We've received your order ${orderId}. Estimated delivery: ${estimatedDeliveryDisplay}.`,
     body: `
       <tr>
         <td class="content">
@@ -229,7 +231,7 @@ export function getOrderConfirmationTemplate(order) {
                   <tr>
                     <td style="border-top:1px solid ${BRAND.border};padding-top:12px;">
                        <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:${BRAND.muted};margin-bottom:4px;">Estimated Delivery</div>
-                       <div style="font-size:15px;font-weight:600;color:${BRAND.primary};">${estimatedDelivery.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+                       <div style="font-size:15px;font-weight:600;color:${BRAND.primary};">${estimatedDeliveryDisplay}</div>
                     </td>
                     <td style="border-top:1px solid ${BRAND.border};padding-top:12px;text-align:right;">
                        <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:${BRAND.muted};margin-bottom:4px;">Status</div>
