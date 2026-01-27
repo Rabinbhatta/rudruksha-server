@@ -317,7 +317,8 @@ export const getAllOrders = async (req, res) => {
       limit = 10,
       orderStatus,
       paymentStatus,
-      userId
+      userId,
+      searchQuery,
     } = req.query;
 
     // Build filter object
@@ -325,6 +326,20 @@ export const getAllOrders = async (req, res) => {
     if (orderStatus) filter.orderStatus = orderStatus;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
     if (userId) filter.userId = userId;
+
+    if (searchQuery && typeof searchQuery === "string" && searchQuery.trim()) {
+      const q = searchQuery.trim();
+      const regex = new RegExp(q, "i");
+      filter.$or = [
+        { orderId: regex },
+        { fullname: regex },
+        { email: regex },
+        { phone: regex },
+        { "deliveryAddress.fullname": regex },
+        { "deliveryAddress.email": regex },
+        { "deliveryAddress.phone": regex },
+      ];
+    }
 
     const skip = (page - 1) * limit;
 
