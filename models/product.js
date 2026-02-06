@@ -101,7 +101,9 @@ const ProductSchema = mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   }],
-});
+   
+  
+},{timestamps:true});
 
 ProductSchema.pre("save", function (next) {
   if (this.isModified("title")) {

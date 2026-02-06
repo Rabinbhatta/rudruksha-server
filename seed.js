@@ -1,51 +1,40 @@
-import { MongoClient } from "mongodb";
+import mongoose from "mongoose";
+import Product from "./models/product.js"; 
+// 👆 adjust path to your Product model
 
-const source = new MongoClient("mongodb+srv://rabinbhattarai646:jz6IMaAyU3biXegt@cluster0.iigm7.mongodb.net/");
-const target = new MongoClient("mongodb+srv://khandbarirudraksha_db_user:NUhWs85JwyAJoioa@cluster0.7ve38dq.mongodb.net/");
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://khandbarirudraksha_db_user:NUhWs85JwyAJoioa@cluster0.7ve38dq.mongodb.net/";
 
-async function migrate() {
-    await source.connect();
-    await target.connect();
+async function backfillProductTimestamps() {
+  try {
+    console.log("🔌 Connecting to MongoDB...");
+    await mongoose.connect(MONGO_URI);
 
-    const sourceDb = source.db("test");
-    const targetDb = target.db("test");
+    console.log("✅ Connected");
 
-    // Get all collections from source
-    const sourceCollections = await sourceDb.listCollections().toArray();
+    console.log("⏳ Backfilling createdAt & updatedAt from _id...");
 
-    // Get all collections from target
-    const targetCollections = await targetDb.listCollections().toArray();
-    const targetCollectionNames = new Set(
-        targetCollections.map(col => col.name)
+    const result = await Product.updateMany(
+      { createdAt: { $exists: false } }, // only old docs
+      [
+        {
+          $set: {
+            createdAt: { $toDate: "$_id" },
+            updatedAt: { $toDate: "$_id" },
+          },
+        },
+      ]
     );
 
-    for (const col of sourceCollections) {
-        const collectionName = col.name;
-
-        // 🚫 Skip if collection already exists
-        if (targetCollectionNames.has(collectionName)) {
-            console.log(`⏭ Skipping existing collection: ${collectionName}`);
-            continue;
-        }
-
-        console.log(`🚀 Migrating collection: ${collectionName}`);
-
-        const data = await sourceDb
-            .collection(collectionName)
-            .find({})
-            .toArray();
-
-        if (data.length > 0) {
-            await targetDb
-                .collection(collectionName)
-                .insertMany(data);
-        }
-    }
-
-    console.log("✅ Migration complete (existing collections skipped)");
-
-    await source.close();
-    await target.close();
+    console.log("✅ Migration completed");
+    console.log("🧾 Matched documents:", result.matchedCount);
+    console.log("🧾 Modified documents:", result.modifiedCount);
+  } catch (error) {
+    console.error("❌ Migration failed:", error);
+  } finally {
+    await mongoose.disconnect();
+    console.log("🔌 Disconnected from MongoDB");
+    process.exit(0);
+  }
 }
 
-migrate().catch(console.error);
+backfillProductTimestamps();

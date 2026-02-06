@@ -33,7 +33,7 @@ export const getUsers = async (req, res) => {
 export const getProducts = async (req, res) => {
   const {
     sortBy = "",
-    order = "asc",
+    order = "desc",
     page = 1,
     limit = 8,
     excludeSlug,
@@ -42,50 +42,70 @@ export const getProducts = async (req, res) => {
   } = req.query;
 
   try {
-    const sortOrder = order === "desc" ? -1 : 1;
+    const sortOrder = order === "asc" ? -1 : 1;
     const pageNumber = parseInt(page, 10) || 1;
-    const limitNumber = parseInt(limit, 10) || 8;
+    const limitNumber = parseInt(20, 10) || 8;
     const skip = (pageNumber - 1) * limitNumber;
 
-    // MATCH STAGE
+    /**
+     * ------------------------
+     * MATCH STAGE (FILTERS)
+     * ------------------------
+     */
     const matchStage = {};
+
     if (excludeSlug) {
       matchStage.slug = { $ne: excludeSlug };
     }
+
     if (filterBy && filterValue) {
       const filters = filterBy.split(",");
       const values = filterValue.split(",");
+
       filters.forEach((filter, idx) => {
         const value = values[idx];
+
         switch (filter) {
-          case "priceRange":
-            const [minPrice, maxPrice] = value.split("-").map(parseFloat);
+          case "priceRange": {
+            const [minPrice, maxPrice] = value
+              .split("-")
+              .map((v) => parseFloat(v));
             matchStage.priceNumeric = { $gte: minPrice, $lte: maxPrice };
             break;
+          }
+
           case "category":
             matchStage.category = { $in: value.split("|") };
             break;
+
           case "subCategory":
             matchStage.subCategory = { $in: value.split("|") };
             break;
+
           case "country":
             matchStage.country = { $in: value.split("|") };
             break;
+
           case "size":
             matchStage.size = { $in: value.split("|") };
             break;
+
           case "faces":
             matchStage.facesNumeric = parseInt(value, 10);
             break;
+
           case "sale":
             matchStage.isSale = value === "true";
             break;
+
           case "special":
             matchStage.isSpecial = value === "true";
             break;
+
           case "topSelling":
             matchStage.isTopSelling = value === "true";
             break;
+
           case "exclusive":
             matchStage.isExclusive = value === "true";
             break;
@@ -93,7 +113,13 @@ export const getProducts = async (req, res) => {
       });
     }
 
+    /**
+     * ------------------------
+     * AGGREGATION PIPELINE
+     * ------------------------
+     */
     const products = await Product.aggregate([
+      // Convert fields once
       {
         $addFields: {
           priceNumeric: {
@@ -124,7 +150,33 @@ export const getProducts = async (req, res) => {
           },
         },
       },
+
+      // Apply filters
       { $match: matchStage },
+
+      // Sort BEFORE pagination
+      {
+        $sort: {
+          [sortBy === "size"
+            ? "sizeNumeric"
+            : sortBy === "faces"
+            ? "facesNumeric"
+            : "priceNumeric"]: sortOrder,
+        },
+      },
+
+      {
+  $sort: {
+    createdAt: -1,
+    _id: -1
+  }
+},
+
+      // ✅ Pagination BEFORE lookups (CRITICAL FIX)
+      { $skip: skip },
+      { $limit: limitNumber },
+
+      // Lookups AFTER pagination
       {
         $lookup: {
           from: "variants",
@@ -147,34 +199,34 @@ export const getProducts = async (req, res) => {
           preserveNullAndEmptyArrays: true,
         },
       },
-      {
-        $sort: {
-          [sortBy === "size"
-            ? "sizeNumeric"
-            : sortBy === "faces"
-            ? "facesNumeric"
-            : "priceNumeric"]: sortOrder,
-        },
-      },
-      { $skip: skip },
-      { $limit: limitNumber },
     ]);
 
+    /**
+     * ------------------------
+     * TOTAL COUNT (NO LOOKUPS)
+     * ------------------------
+     */
     const totalCount = await Product.countDocuments(matchStage);
 
+    /**
+     * ------------------------
+     * RESPONSE
+     * ------------------------
+     */
     res.status(200).json({
       products,
       pagination: {
         currentPage: pageNumber,
         totalPages: Math.ceil(totalCount / limitNumber),
         totalCount,
+        limit: limitNumber,
       },
     });
   } catch (error) {
     console.error("Error fetching products:", error);
-    res
-      .status(500)
-      .json({ error: "An error occurred while fetching products." });
+    res.status(500).json({
+      error: "An error occurred while fetching products.",
+    });
   }
 };
 
