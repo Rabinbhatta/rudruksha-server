@@ -22,7 +22,8 @@ import orderRoute from "./router/order.js";
 import eventRoute from "./router/events.js";
 import uploadRoute from "./router/upload.js";
 import dashboardRoute from "./router/dashboard.js";
-import bannerRoute from "./router/banner.js"
+import bannerRoute from "./router/banner.js";
+import teamRoute from "./router/team.js";
 import faqRoute from "./router/faq.js";
 import contactRoute from "./router/contact.js";
 import personalInfoRoute from "./router/personal-info.js";
@@ -69,7 +70,8 @@ app.use("/order", orderRoute);
 app.use("/event", eventRoute);
 app.use("/upload", uploadRoute);
 app.use("/dashboard", dashboardRoute);
-app.use("/banner",bannerRoute)
+app.use("/banner", bannerRoute);
+app.use("/team", teamRoute);
 app.use("/faq", faqRoute);
 app.use("/contact", contactRoute);
 app.use("/personal-info", personalInfoRoute);
